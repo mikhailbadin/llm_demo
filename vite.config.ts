@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
+  // Сайт живёт на https://mikhailbadin.github.io/llm_demo/, поэтому все ссылки на
+  // ассеты должны быть с префиксом имени репозитория.
+  base: '/llm_demo/',
   plugins: [react()],
   resolve: {
     alias: {
