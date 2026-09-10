@@ -1,32 +1,141 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Контекст проекта: показывается ИИ при создании proposal / specs / design / tasks
+# и при apply / archive. Подробности архитектуры — в CLAUDE.md и README.md;
+# здесь только то, что нужно, чтобы планировать изменения правильно.
+context: |
+  Проект: статический сайт-курс «Как работают LLM» (learn-llm). 10 разделов на русском,
+  интерактивные виджеты и пять 3D-сцен. Бэкенда и внешних API нет — все «модели»
+  игрушечные и считаются в браузере. Деплой на GitHub Pages как проектная страница
+  https://mikhailbadin.github.io/llm_demo/ (base: '/llm_demo/').
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Стек: Vite 8, React 19, TypeScript 5.9, react-router 7, zustand 5, three.js 0.186 +
+  @react-three/fiber 9 + drei 10, KaTeX, Radix UI (popover, tooltip). Тесты — vitest
+  (только src/lib/**/*.test.ts, environment node). Node ≥ 22.12.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Язык проекта — русский: тексты UI, комментарии в коде, сообщения коммитов,
+  документы OpenSpec. Идентификаторы в коде — английские.
+
+  Ключевые инварианты (нарушение = баг):
+  - Разделы описаны только в src/sections/registry.ts (id, slug, order, has3d,
+    minutes, ленивый component). Маршрут /:slug строится из реестра; новый раздел =
+    запись в SECTIONS + литерал в SectionId (sections/types.ts) + папка
+    sections/NN-slug/index.tsx с default-экспортом.
+  - three / @react-three/* импортируются ТОЛЬКО в src/components/three/ и
+    src/scenes/<Name>/index.tsx. Стор сцены (scenes/<Name>/store.ts) создаётся через
+    createSceneStore и импортирует только lib/, data/ и zustand; его читают и
+    DOM-панель управления, и канвас. Оболочка components/three-shell/ three не
+    импортирует. Так three.js остаётся в отдельном ленивом чанке.
+    Проверка: grep -rln "from 'three'\|from '@react-three" src | grep -v
+    "^src/components/three/\|^src/scenes/[A-Za-z]*/index.tsx" — должно быть пусто.
+  - Новую тяжёлую зависимость сцен добавлять в optimizeDeps.include (vite.config.ts),
+    иначе в dev появляется вторая копия React.
+  - Детерминизм: случайность только через createRng(seed) из lib/rng.ts, Math.random
+    в src/ запрещён. Одинаковый seed — одинаковая картинка.
+  - Чистая математика живёт в src/lib/ и только она покрыта тестами. Новая
+    вычислительная логика — в lib/ с тестом рядом в src/lib/__tests__/.
+  - Данные маленькие и зашиты в src/data/ (корпус, BPE-корпус, эмбеддинги, глоссарий).
+  - Цвета объявлены дважды: CSS-переменные в styles/global.css и те же hex в
+    styles/theme.ts (для SVG и three). Менять оба места.
+  - Пути к файлам из public/ в коде — только через `${import.meta.env.BASE_URL}имя`.
+  - Термины в тексте — <Term id="…"> с TermId из data/glossary.ts; формулы — <Formula>
+    / <M> (KaTeX). Виджеты оборачиваются в WidgetFrame (заголовок, «?», «Сбросить»).
+  - ESLint: правила React Compiler (set-state-in-effect, refs) выключены намеренно;
+    неиспользуемые аргументы — с префиксом _.
+
+  Команды проверки: npm run lint, npm run typecheck, npm test (npm test -- bpe для
+  одного файла), npm run build (tsc → vite build → копия dist/404.html). CI на push в
+  master гоняет lint → test → build и публикует dist/.
+
+  Поиск по коду: сначала ast-index (search, symbol, class, usages, outline, imports),
+  grep — только для регулярок, строковых литералов и текста комментариев.
+
+# Правила для отдельных артефактов (дополняют встроенные инструкции схемы).
+# Многострочные элементы записаны как `>-`, чтобы двоеточия и кавычки внутри
+# не ломали YAML.
+rules:
+  proposal:
+    - Писать по-русски. Объём — не больше одной страницы.
+    - >-
+      В «What Changes» указывать затронутые разделы по slug из registry.ts и явно
+      отмечать, затрагиваются ли 3D-сцены (src/scenes/) и чанк three.js.
+    - Добавлять раздел «Non-goals» — что намеренно не входит в изменение.
+    - >-
+      Изменения только в текстах, стилях, инструментах или чистый рефакторинг без
+      изменения поведения — ставить skip_specs: true, а не выдумывать требование.
+    - >-
+      Не предлагать бэкенд, внешние API, аналитику и сетевые запросы в рантайме —
+      сайт полностью статический.
+  specs:
+    - >-
+      Служебные заголовки и ключевые слова оставлять на английском ровно как в схеме
+      («## ADDED Requirements», «### Requirement:», «#### Scenario:», «**WHEN**»,
+      «**THEN**», SHALL / MUST), текст требований и сценариев — по-русски.
+    - >-
+      Capability — плоский kebab-case без вложенных доменов. Для поведения одного
+      раздела использовать его slug (например tokenization, attention); для сквозных
+      систем — имя системы (section-registry, scene-shell, glossary-terms, theme).
+    - >-
+      Описывать наблюдаемое поведение в браузере: что пользователь видит, крутит и
+      получает. Не упоминать имена компонентов, сторов, файлов и библиотек.
+    - >-
+      Для виджетов и сцен с seed фиксировать детерминизм как требование —
+      одинаковые входы и seed дают одинаковый результат.
+    - >-
+      Сценарий должен быть проверяемым: конкретный вход (текст, слайдер, seed) и
+      конкретный наблюдаемый результат.
+  design:
+    - >-
+      Писать по-русски. Для каждого нового виджета/сцены указать, где живёт стор,
+      где — канвас, и что из математики выносится в src/lib/ с тестами.
+    - >-
+      Явно проверить инварианты из контекста (границы импортов three, реестр разделов,
+      детерминизм, optimizeDeps, BASE_URL, два места для цветов) и написать, какие из
+      них затрагиваются.
+    - >-
+      Оценить влияние на размер чанков: входной чанк ~95 КБ gz, three ~250 КБ gz;
+      новые тяжёлые зависимости требуют обоснования и ленивой загрузки.
+    - >-
+      Учитывать узкие экраны и touch (поповеры по нажатию, CameraRig отодвигает
+      камеру, защита от перехвата скролла) и фолбэк без WebGL.
+  tasks:
+    - >-
+      Писать по-русски. Каждая задача — с проверкой: команда (npm test, npm run
+      lint, npm run typecheck, npm run build), grep-инвариант или наблюдаемое
+      поведение в браузере по конкретному адресу /llm_demo/<slug>.
+    - >-
+      Новую чистую функцию в src/lib/ сопровождать задачей на тест в
+      src/lib/__tests__/.
+    - >-
+      При добавлении или переименовании раздела включать задачи на registry.ts,
+      SectionId, таблицу «Программа» в README.md и CLAUDE.md.
+    - >-
+      Последняя группа — сквозная проверка: npm run lint && npm run typecheck &&
+      npm test && npm run build, плюс grep-проверка границ импортов three, если
+      трогались сцены.
+
+# Советы для операций apply / archive (не заменяют правила выше).
+operations:
+  apply:
+    guidance:
+      - Комментарии в коде и тексты UI — по-русски, идентификаторы — по-английски.
+      - >-
+        После каждой группы задач запускать npm run lint, npm run typecheck и npm
+        test; при правках в src/scenes/ или components/ — ещё grep-проверку границ
+        импортов three из контекста.
+      - Не использовать Math.random, не добавлять сетевые запросы и внешние API.
+      - >-
+        Не коммитить и не пушить без явной просьбы; сообщения коммитов — по-русски,
+        в стиле «Логотип в шапке — путь через BASE_URL».
+      - Отчёт о ходе — коротко, по задачам, с выводом упавших проверок целиком.
+  archive:
+    guidance:
+      - >-
+        Перед архивацией убедиться, что npm run build проходит, и что README.md /
+        CLAUDE.md обновлены, если менялись разделы, команды или инварианты.
+      - >-
+        Для новых capability проверить, что в основной спеке заполнен «## Purpose»
+        (без плейсхолдера TBD).
+      - >-
+        В конце коротко подытожить, что заархивировано и какие основные спеки
+        обновлены.
