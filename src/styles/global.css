@@ -320,7 +320,7 @@ code, kbd, pre { font-family: var(--mono); font-size: 0.92em; }
 .hl-special { color: var(--accent-2); font-weight: 600; }
 
 /* ---------- 3D scene shell ---------- */
-.scene { margin: 24px 0 32px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); overflow: clip; }
+.scene { margin: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-2); overflow: clip; }
 .scene__head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
 .scene__title { font-weight: 600; color: var(--text-strong); font-size: 15px; flex: 1; display: flex; align-items: center; gap: 8px; }
 .scene__badge { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--accent-2-dim); color: var(--accent-2); font-weight: 600; letter-spacing: 0.05em; }
@@ -350,6 +350,25 @@ code, kbd, pre { font-family: var(--mono); font-size: 0.92em; }
 .tour__foot .stepper__dots { flex: 1; }
 .tour__kbd { font-size: 11.5px; color: var(--muted-2); }
 @media (max-width: 720px) { .scene__overlay { top: auto; bottom: 12px; right: 12px; width: min(240px, calc(100% - 24px)); max-height: 45%; } .tour { max-width: none; right: 12px; } .tour__kbd { display: none; } }
+
+/* Развёрнутая сцена: секция уходит в fixed на весь экран, обёртка держит её место в потоке */
+.scene-slot { margin: 24px 0 32px; overflow-anchor: none; }
+.is-scroll-locked { overflow: hidden; overscroll-behavior: none; }
+.scene--expanded {
+  position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100dvh; z-index: 50;
+  margin: 0; border: none; border-radius: 0; display: flex; flex-direction: column; background: var(--bg-2);
+}
+.scene--expanded .scene__viewport { flex: 1; height: auto; }
+/* В развёрнутом кадре страница не прокручивается и подпись под сценой не нужна. */
+.scene--expanded .scene__hint, .scene--expanded .scene__guard, .scene--expanded .widget__foot { display: none; }
+@media (min-width: 721px) {
+  .scene--expanded .scene__overlay { width: min(320px, calc(100% - 32px)); max-height: calc(100% - 32px); }
+  .scene--expanded .tour { max-width: 720px; left: 24px; right: 24px; bottom: 24px; }
+}
+@media (max-width: 720px) {
+  /* В высоком кадре панель уезжает наверх, иначе она сталкивается с карточкой экскурсии внизу. */
+  .scene--expanded .scene__overlay { top: 12px; bottom: auto; max-height: 45%; }
+}
 
 .label3d { padding: 3px 8px; border-radius: 6px; background: rgba(11,15,25,0.88); border: 1px solid var(--border-2); color: var(--text-strong); font-size: 12.5px; white-space: nowrap; pointer-events: none; transform: translateY(-4px); box-shadow: 0 2px 8px rgba(0,0,0,0.4); font-family: var(--font); }
 .label3d--muted { color: var(--muted); background: rgba(11,15,25,0.6); border-color: var(--border); }

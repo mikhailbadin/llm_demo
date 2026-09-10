@@ -48,7 +48,7 @@ npm run typecheck    # tsc --noEmit
 - `store.ts` — zustand-стор, созданный один раз на уровне модуля через `createSceneStore(initialParams, tour)` из `scenes/store.ts`. Импортирует только `lib/`, `data/` и zustand. Его читают и DOM-панель управления (`sections/NN/widgets/*Overlay.tsx`), и канвас.
 - `index.tsx` — сам канвас: default-экспорт компонента `SceneProps = { store, active }`, регистрируется в `scenes/registry.ts` (`SceneId` + ленивый загрузчик). Только здесь и в `src/components/three/` разрешены импорты `three`, `@react-three/fiber`, `@react-three/drei`.
 
-Раздел вставляет сцену через `SceneContainer` из `components/three-shell/` (заголовок, тулбар, ленивая загрузка по `useInView`, экскурсия, фолбэк без WebGL, защита от перехвата скролла). `three-shell` тоже не импортирует three. Благодаря этому three.js (~250 КБ gz) лежит в отдельном чанке и грузится, только когда сцена подъезжает к экрану; входной чанк ~95 КБ gz. Проверка инварианта:
+Раздел вставляет сцену через `SceneContainer` из `components/three-shell/` (заголовок, тулбар, ленивая загрузка по `useInView`, экскурсия, развёрнутый на весь экран режим, фолбэк без WebGL, защита от перехвата скролла). `three-shell` тоже не импортирует three. Благодаря этому three.js (~250 КБ gz) лежит в отдельном чанке и грузится, только когда сцена подъезжает к экрану; входной чанк ~95 КБ gz. Проверка инварианта:
 
 ```bash
 grep -rln "from 'three'\|from '@react-three" src | grep -v "^src/components/three/\|^src/scenes/[A-Za-z]*/index.tsx"   # должно быть пусто
