@@ -1,0 +1,1 @@
+function e(e){let t=e>>>0,n=()=>{t=t+1831565813>>>0;let e=t;return e=Math.imul(e^e>>>15,e|1),e^=e+Math.imul(e^e>>>7,e|61),((e^e>>>14)>>>0)/4294967296};return{next:n,int:e=>Math.floor(n()*e),pick:e=>e[Math.floor(n()*e.length)],gauss:(e=0,t=1)=>{let r=1-n(),i=n();return e+t*Math.sqrt(-2*Math.log(r))*Math.cos(2*Math.PI*i)}}}export{e as t};

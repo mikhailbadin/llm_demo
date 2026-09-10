@@ -1,0 +1,1 @@
+var e=e=>e.reduce((e,t)=>e+t,0);function t(t,n=1){let r=Math.max(n,1e-6),i=t.map(e=>e/r),a=Math.max(...i),o=i.map(e=>Math.exp(e-a)),s=e(o);return o.map(e=>e/s)}function n(t){return-e(t.map(e=>e>0?e*Math.log(e):0))}var r=e=>1/(1+Math.exp(-e));export{r as n,t as r,n as t};
