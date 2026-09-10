@@ -23,7 +23,7 @@ export function Header({ menuOpen, onToggleMenu }: Props) {
         </svg>
       </button>
       <Link to="/" className="header__brand">
-        <img className="header__logo" src="/favicon.svg" alt="" width={26} height={26} />
+        <img className="header__logo" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={26} height={26} />
         <span>Как работают LLM</span>
       </Link>
       <div className="header__spacer" />
