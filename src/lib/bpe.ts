@@ -29,14 +29,20 @@ export interface Token {
 }
 
 const WORD_RE = /[\p{L}\p{N}]+|[^\s\p{L}\p{N}]/gu;
+const IS_WORD_RE = /^[\p{L}\p{N}]+$/u;
+
+/** Знаки препинания, которые всегда есть в базовом словаре — как байты в настоящем BPE. */
+const BASE_PUNCT = [...'.,!?;:—–-()«»"\'…'];
 
 export function splitWords(text: string): string[] {
   return text.match(WORD_RE) ?? [];
 }
 
+/** Слово → символы; последняя буква получает маркер конца слова. Знак препинания остаётся одним символом без маркера. */
 function toSymbols(word: string): string[] {
   const chars = [...word];
   if (chars.length === 0) return [];
+  if (!IS_WORD_RE.test(word)) return chars;
   chars[chars.length - 1] = chars[chars.length - 1] + EOW;
   return chars;
 }
@@ -69,8 +75,11 @@ function mergeSymbols(symbols: readonly string[], pair: [string, string]): strin
 export function learnBpe(corpus: Record<string, number>, numMerges: number): BpeModel {
   let words: BpeWord[] = Object.entries(corpus).map(([word, count]) => ({ word, count, symbols: toSymbols(word.toLowerCase()) }));
   const initialWords = words.map((w) => ({ ...w, symbols: [...w.symbols] }));
-  const base = new Set<string>();
+  const base = new Set<string>(BASE_PUNCT);
   for (const w of words) for (const s of w.symbols) base.add(s);
+  // У каждой буквы есть вариант «в конце слова», даже если в корпусе на неё ни одно слово не кончается:
+  // иначе незнакомое слово не смогло бы распасться на буквы.
+  for (const s of [...base]) if (!s.endsWith(EOW) && IS_WORD_RE.test(s)) base.add(s + EOW);
   const baseVocab = [...base].sort();
   const vocab = [...baseVocab];
   const merges: [string, string][] = [];
@@ -101,14 +110,23 @@ export function tokenizeBpe(text: string, model: BpeModel, numMerges?: number): 
   const out: Token[] = [];
   for (const word of splitWords(text)) {
     let symbols = toSymbols(word.toLowerCase());
-    for (const m of merges) symbols = mergeSymbols(symbols, m);
+    if (symbols.length > 1) for (const m of merges) symbols = mergeSymbols(symbols, m);
     for (const s of symbols) out.push({ text: s, id: index.get(s) ?? -1 });
   }
   return out;
 }
 
+/** Алфавит посимвольного токенизатора: буквы, цифры, знаки. Символ вне алфавита получает id −1. */
+export const CHAR_VOCAB: string[] = [
+  ...' абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+  ...'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+  ...BASE_PUNCT,
+  ...'[]{}/\\%+=*@#№$&<>|~^`_\n\t',
+];
+const CHAR_INDEX = new Map(CHAR_VOCAB.map((c, i) => [c, i] as const));
+
 export function tokenizeChars(text: string): Token[] {
-  return [...text].map((ch) => ({ text: ch, id: ch.codePointAt(0) ?? 0 }));
+  return [...text].map((ch) => ({ text: ch, id: CHAR_INDEX.get(ch) ?? -1 }));
 }
 
 function hashId(s: string): number {
@@ -120,6 +138,14 @@ function hashId(s: string): number {
   return (h >>> 0) % 50000;
 }
 
-export function tokenizeWords(text: string): Token[] {
-  return splitWords(text).map((w) => ({ text: w, id: hashId(w.toLowerCase()) }));
+/**
+ * Пословный токенизатор. Если передан словарь, id — номер слова в нём, а слова вне словаря получают −1
+ * («неизвестный токен»); без словаря id — хеш слова.
+ */
+export function tokenizeWords(text: string, vocab?: readonly string[]): Token[] {
+  const index = vocab ? new Map(vocab.map((w, i) => [w, i] as const)) : null;
+  return splitWords(text).map((w) => {
+    const key = w.toLowerCase();
+    return { text: w, id: index ? (index.get(key) ?? -1) : hashId(key) };
+  });
 }

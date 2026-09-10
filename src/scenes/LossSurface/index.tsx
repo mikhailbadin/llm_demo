@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { SceneCanvas } from '@/components/three/SceneCanvas';
 import { Label3D } from '@/components/three/Label3D';
-import { lossGradient, lossSurface } from '@/lib/landscape';
+import { LOSS_MINIMA, lossGradient, lossSurface } from '@/lib/landscape';
 import { fmtFixed } from '@/lib/format';
 import type { Vec3 } from '@/lib/vec3';
 import { theme } from '@/styles/theme';
@@ -57,6 +57,10 @@ function Ball({ store }: { store: SceneStore }) {
   const mesh = useRef<THREE.Mesh>(null);
   const arrow = useRef<THREE.ArrowHelper>(null);
   const target = useMemo(() => new THREE.Vector3(bx, lossSurface(bx, bz) * Y_SCALE + 0.18, bz), [bx, bz]);
+  // Стартовая позиция задаётся один раз: если передавать target как проп, r3f будет телепортировать
+  // шарик на каждом шаге, и плавного переката в useFrame не получится.
+  const [initialPos] = useState(() => target.clone());
+  const arrowArgs = useMemo(() => [new THREE.Vector3(1, 0, 0), initialPos, 1, new THREE.Color(theme.danger), 0.25, 0.15] as const, [initialPos]);
   useFrame((_, dt) => {
     const m = mesh.current;
     if (!m) return;
@@ -78,11 +82,11 @@ function Ball({ store }: { store: SceneStore }) {
   });
   return (
     <>
-      <mesh ref={mesh} position={target}>
+      <mesh ref={mesh} position={initialPos}>
         <sphereGeometry args={[0.18, 24, 18]} />
         <meshStandardMaterial color={theme.text} emissive={theme.accent} emissiveIntensity={0.5} roughness={0.2} />
       </mesh>
-      {showGrad && <arrowHelper ref={arrow} args={[new THREE.Vector3(1, 0, 0), target, 1, new THREE.Color(theme.danger), 0.25, 0.15]} />}
+      {showGrad && <arrowHelper ref={arrow} args={[...arrowArgs]} />}
     </>
   );
 }
@@ -137,10 +141,10 @@ function Contents({ store }: { store: SceneStore }) {
           L = {fmtFixed(hover.l, 2)} — нажмите, чтобы поставить шарик
         </Label3D>
       )}
-      <Label3D position={[1.5, lossSurface(1.5, 1) * Y_SCALE - 0.35, 1]} variant="muted">
+      <Label3D position={[LOSS_MINIMA.deep[0], lossSurface(...LOSS_MINIMA.deep) * Y_SCALE - 0.35, LOSS_MINIMA.deep[1]]} variant="muted">
         глубокий минимум
       </Label3D>
-      <Label3D position={[-2, lossSurface(-2, -2) * Y_SCALE - 0.35, -2]} variant="muted">
+      <Label3D position={[LOSS_MINIMA.local[0], lossSurface(...LOSS_MINIMA.local) * Y_SCALE - 0.35, LOSS_MINIMA.local[1]]} variant="muted">
         локальный минимум
       </Label3D>
     </>

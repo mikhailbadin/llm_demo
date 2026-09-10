@@ -7,12 +7,13 @@ import { AttentionStepByStep } from './widgets/AttentionStepByStep';
 import { AttentionHeatmap } from './widgets/AttentionHeatmap';
 import { AttentionControls } from './widgets/AttentionControls';
 import { MultiHeadFigure } from './widgets/MultiHeadFigure';
+import { ATTENTION_EXAMPLES } from '@/data/attentionExamples';
 
 export default function AttentionSection() {
   // По умолчанию запрос — «он»: так и виджеты, и сцена сразу показывают веса.
   useEffect(() => {
     const st = attentionStore.getState();
-    if (!st.selectedId) st.select('t7');
+    if (!st.selectedId) st.select(`t${ATTENTION_EXAMPLES[0].focus}`);
   }, []);
   return (
     <>
@@ -64,7 +65,8 @@ export default function AttentionSection() {
       />
       <Formula tex={String.raw`Q = XW_Q, \qquad K = XW_K, \qquad V = XW_V`} caption={<>Все три вектора получаются из одних и тех же входных векторов X умножением на три обучаемые матрицы. Именно эти матрицы модель и учит.</>} />
       <Callout kind="try">
-        Пройдите вычисление по шагам для одного запроса. Затем посмотрите на всю матрицу сразу и включите маску — веса в строке перераспределятся.
+        Пройдите вычисление по шагам для одного запроса. Затем посмотрите на всю матрицу сразу, выберите строку «потому» и включите маску: больше половины её веса
+        уходило вперёд, на «что», а с маской оно перераспределится между словами слева.
       </Callout>
       <AttentionStepByStep />
       <AttentionHeatmap />
@@ -79,7 +81,7 @@ export default function AttentionSection() {
         title="Дуги внимания"
         store={attentionStore}
         overlay={<AttentionControls />}
-        legend={<p>Жёлтая сфера — токен-запрос. Дуги окрашены от фиолетового (слабое внимание) к жёлтому (сильное). Кольцо вокруг запроса — внимание на самого себя.</p>}
+        legend={<p>Жёлтая сфера — токен-запрос. Дуги окрашены от фиолетового (слабое внимание) к жёлтому (сильное); в режиме «Обе головы сразу» цвет означает голову: фиолетовый — голова 1, бирюзовый — голова 2, а столбики показывают выбранную голову. Кольцо вокруг запроса — внимание на самого себя.</p>}
       />
 
       <h2>Много голов и маска</h2>

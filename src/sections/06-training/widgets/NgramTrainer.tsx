@@ -25,7 +25,9 @@ export function NgramTrainer() {
   const [n, setN] = useState(CORPUS.length);
   const [ctx, setCtx] = useState('кот');
   const model = useMemo(() => trainNgram(CORPUS.slice(0, n)), [n]);
-  const tokens = tokenizeText(ctx);
+  const tokens = useMemo(() => tokenizeText(ctx), [ctx]);
+  // Триграммная модель смотрит только на два последних слова контекста.
+  const used = tokens.slice(-2);
   const counts = useMemo(() => contextCounts(model, tokens).slice(0, 8), [model, tokens]);
   const dist = useMemo(() => (model.vocab.length ? nextDistribution(model, tokens).slice(0, 8) : []), [model, tokens]);
   const heldLoss = useMemo(() => (model.vocab.length ? HELD_OUT.reduce((s, x) => s + scoreSentence(model, x), 0) / HELD_OUT.length : NaN), [model]);
@@ -34,7 +36,7 @@ export function NgramTrainer() {
     <WidgetFrame
       title="Обучаем модель: считаем, что идёт после чего"
       icon="📚"
-      help="Ползунок — сколько предложений корпуса модель уже «прочитала». Слева — счётчики: сколько раз каждое слово встречалось после выбранного контекста. Справа — как падает ошибка на трёх предложениях, которых модель не видела."
+      help="Ползунок — сколько предложений корпуса модель уже «прочитала». Слева — счётчики: сколько раз каждое слово встречалось после двух последних слов выбранного контекста. Справа — как падает ошибка на трёх предложениях, которых модель не видела."
       onReset={() => {
         setN(CORPUS.length);
         setCtx('кот');
@@ -48,7 +50,8 @@ export function NgramTrainer() {
       <div className="grid-2">
         <div>
           <div className="small muted" style={{ marginBottom: 4 }}>
-            После «{ctx}» встречалось ({plural(counts.reduce((s, c) => s + c.count, 0), ['раз', 'раза', 'раз'])})
+            После «{tokens.length > 2 ? '…' : ''}{used.join(' ')}» встречалось ({plural(counts.reduce((s, c) => s + c.count, 0), ['раз', 'раза', 'раз'])})
+            {tokens.length > 2 && <span title="Модель учитывает только два последних слова контекста"> · учитываются два последних слова</span>}
           </div>
           {counts.length ? (
             <BarChart
@@ -56,7 +59,7 @@ export function NgramTrainer() {
               format={(v) => `${v}`}
             />
           ) : (
-            <p className="muted small">Такого контекста модель ещё не видела — она распределит вероятность почти равномерно.</p>
+            <p className="muted small">Такого контекста модель ещё не видела — она распределит вероятность по общей частоте слов, как будто контекста нет.</p>
           )}
         </div>
         <div>

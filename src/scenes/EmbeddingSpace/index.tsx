@@ -24,7 +24,8 @@ function WordSphere({ store, id }: { store: SceneStore; id: string }) {
   const w = getWord(id);
   const handlers = useHoverable(store, id);
   const hovered = store((s) => s.hoveredId === id);
-  const selected = store((s) => s.selectedId === id);
+  // В режиме «Арифметика» выбор точки ничего не показывает, поэтому и не подсвечиваем её.
+  const selected = store((s) => s.selectedId === id && s.params.mode === 'neighbors');
   const highlight = store((s) => s.highlight);
   const dimmed = highlight.length > 0 && !highlight.includes(id) && !highlight.includes(`cluster:${w.cluster}`);
   const base = clusterColor(w.cluster as ClusterId);
@@ -51,11 +52,12 @@ function WordSphere({ store, id }: { store: SceneStore; id: string }) {
 }
 
 function Arrow({ from, to, color, head = 0.35 }: { from: Vec3; to: Vec3; color: string; head?: number }) {
-  const d = sub(to, from);
-  const len = length(d);
-  const dir = useMemo(() => new THREE.Vector3(...normalize(d)), [d]);
-  const origin = useMemo(() => new THREE.Vector3(...from), [from]);
-  return <arrowHelper args={[dir, origin, Math.max(len, 0.01), new THREE.Color(color), head, head * 0.6]} />;
+  // args пересобираются только при смене концов или цвета — иначе r3f пересоздавал бы ArrowHelper на каждый рендер.
+  const args = useMemo(() => {
+    const d = sub(to, from);
+    return [new THREE.Vector3(...normalize(d)), new THREE.Vector3(...from), Math.max(length(d), 0.01), new THREE.Color(color), head, head * 0.6] as const;
+  }, [from, to, color, head]);
+  return <arrowHelper args={[...args]} />;
 }
 
 function Contents({ store }: { store: SceneStore }) {
@@ -126,12 +128,13 @@ function Contents({ store }: { store: SceneStore }) {
           <Label3D position={getWord(b).pos} offsetY={0.42}>{getWord(b).word}</Label3D>
           <Label3D position={getWord(c).pos} offsetY={0.42}>{getWord(c).word}</Label3D>
           <Label3D position={an.target} variant="accent" offsetY={-0.5}>
-            {an.neighbors[0] ? `≈ ${an.neighbors[0].word.word} (cos ${fmtFixed(an.neighbors[0].cos, 2)})` : '?'}
+            {an.neighbors[0] ? `≈ ${an.neighbors[0].word.word} (расстояние ${fmtFixed(an.neighbors[0].dist ?? 0, 2)})` : '?'}
           </Label3D>
         </>
       )}
 
-      {hovered && hovered.id !== selectedId && !neighbors.some((n) => n.word.id === hovered.id) && (
+      {hovered && !(mode === 'neighbors' && hovered.id === selectedId) && !neighbors.some((n) => n.word.id === hovered.id) && !(an && [a, b, c].includes(hovered.id)) && (
+
         <Label3D position={hovered.pos} offsetY={0.45}>
           {hovered.word} <span className="muted">· {getCluster(hovered.cluster as ClusterId).label.toLowerCase()}</span>
         </Label3D>

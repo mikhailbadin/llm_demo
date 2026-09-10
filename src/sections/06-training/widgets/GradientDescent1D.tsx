@@ -45,13 +45,17 @@ export function GradientDescent1D() {
     setAuto(false);
     setHistory([start]);
   };
+  const resetAll = () => {
+    reset();
+    setLr(0.1);
+  };
 
   return (
     <WidgetFrame
       title="Градиентный спуск по одному параметру"
       icon="⛰️"
       help="Кривая — потери как функция одного параметра w. Шарик — текущее значение. Каждый «Шаг» сдвигает его против производной. Меняйте скорость обучения: при маленькой спуск медленный, при большой шарик перепрыгивает минимум."
-      onReset={() => reset()}
+      onReset={resetAll}
       note="Обратите внимание: из стартовой точки шарик скатывается в ближнюю, но не самую глубокую яму. Попробуйте стартовать слева (кнопка) или увеличить скорость обучения так, чтобы перескочить горб."
     >
       <div className="controls">
@@ -69,12 +73,17 @@ export function GradientDescent1D() {
         </div>
       </div>
       <LineChart series={[{ points: CURVE, color: theme.accent2 }]} xDomain={[-3.2, 3.2]} yDomain={[0, 6]} height={230} xLabel="параметр w" yLabel="loss(w)" xTicks={8} yTicks={6}>
-        {({ sx, sy }) => {
+        {({ sx, sy, plot }) => {
           const y = loss1d(w);
           const x0 = w - 0.8;
           const x1 = w + 0.8;
           return (
-            <g>
+            <g clipPath="url(#gd-clip)">
+              <defs>
+                <clipPath id="gd-clip">
+                  <rect x={plot.x0} y={plot.y1} width={plot.x1 - plot.x0} height={plot.y0 - plot.y1} />
+                </clipPath>
+              </defs>
               {history.slice(0, -1).map((h, i) => (
                 <circle key={i} cx={sx(h)} cy={sy(loss1d(h))} r={3} fill={theme.muted2} opacity={0.3 + (0.7 * i) / history.length} />
               ))}

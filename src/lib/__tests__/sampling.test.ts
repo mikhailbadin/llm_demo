@@ -37,6 +37,17 @@ describe('top-k / top-p', () => {
     const rows = transformDistribution(dist, { temperature: 1, topK: null, topP: 1 });
     expect(rows.every((r) => r.kept)).toBe(true);
   });
+  it('top-p считается по перенормированным после top-k вероятностям', () => {
+    // после top-k = 2: a = 0,625, b = 0,375 → top-p = 0,6 оставляет только a
+    const rows = transformDistribution(dist, { temperature: 1, topK: 2, topP: 0.6 });
+    expect(rows.filter((r) => r.kept).map((r) => r.token)).toEqual(['a']);
+    expect(rows[0].pFinal).toBeCloseTo(1);
+  });
+  it('лидер остаётся даже при крошечном top-p', () => {
+    const rows = transformDistribution(dist, { temperature: 1, topK: null, topP: 0 });
+    expect(rows[0].kept).toBe(true);
+    expect(rows[0].pFinal).toBeCloseTo(1);
+  });
 });
 
 describe('сэмплирование', () => {

@@ -5,11 +5,13 @@ import { GLOSSARY, type TermId } from '@/data/glossary';
 import { SECTIONS, getSectionById } from '@/sections/registry';
 import { theme } from '@/styles/theme';
 
+/** Поиск не различает «ё» и «е». */
+const fold = (s: string) => s.toLowerCase().replace(/ё/g, 'е');
 const FLOW: { id: string; title: string; slug: string; sub: string }[] = [
   { id: 'text', title: 'Текст', slug: 'tokenization', sub: 'токенизация' },
   { id: 'ids', title: 'Номера токенов', slug: 'embeddings', sub: 'таблица E' },
-  { id: 'vec', title: 'Векторы', slug: 'attention', sub: '+ позиция' },
-  { id: 'blocks', title: 'N блоков', slug: 'transformer', sub: 'внимание + MLP' },
+  { id: 'vec', title: 'Векторы', slug: 'transformer', sub: '+ позиция' },
+  { id: 'blocks', title: 'L блоков', slug: 'attention', sub: 'внимание + MLP' },
   { id: 'logits', title: 'Логиты', slug: 'sampling', sub: 'softmax, T, top-p' },
   { id: 'token', title: 'Следующий токен', slug: 'intro', sub: '→ снова в текст' },
 ];
@@ -18,10 +20,10 @@ export default function GlossarySection() {
   const [q, setQ] = useState('');
   const entries = useMemo(() => {
     const ids = Object.keys(GLOSSARY) as TermId[];
-    const needle = q.trim().toLowerCase();
+    const needle = fold(q.trim());
     return ids
       .map((id) => ({ id, ...GLOSSARY[id] }))
-      .filter((e) => !needle || e.term.toLowerCase().includes(needle) || e.short.toLowerCase().includes(needle))
+      .filter((e) => !needle || fold(e.term).includes(needle) || fold(e.short).includes(needle))
       .sort((a, b) => {
         const oa = a.section ? getSectionById(a.section).order : 99;
         const ob = b.section ? getSectionById(b.section).order : 99;
@@ -74,7 +76,7 @@ export default function GlossarySection() {
       <Summary>
         <ul>
           <li>LLM — предсказатель следующего токена; всё остальное надстроено над этим.</li>
-          <li>Токены → эмбеддинги → внимание и MLP в N блоках → логиты → softmax → выбор — и так по кругу.</li>
+          <li>Токены → эмбеддинги → внимание и MLP в L блоках → логиты → softmax → выбор — и так по кругу.</li>
           <li>Обучение задаёт параметры, дообучение — характер, а промпт — контекст. Дальше всё решает статистика.</li>
         </ul>
         <p className="small muted" style={{ margin: '12px 0 0' }}>

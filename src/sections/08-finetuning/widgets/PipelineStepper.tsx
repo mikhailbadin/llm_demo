@@ -20,6 +20,7 @@ export function PipelineStepper() {
             key={st.id}
             type="button"
             className={`btn btn--sm${k === i ? ' btn--primary' : ''}`}
+            aria-pressed={k === i}
             onClick={() => setI(k)}
             style={{ flex: '1 1 120px' }}
           >

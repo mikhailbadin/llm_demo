@@ -7,6 +7,7 @@ import { createRng } from '@/lib/rng';
 import { fmtFixed } from '@/lib/format';
 import { attentionStore } from '@/scenes/Attention/store';
 import { mixHex, theme } from '@/styles/theme';
+import { resetAttention } from './AttentionControls';
 
 const STAGES = [
   { title: 'Оценки: запрос × ключи', text: 'Запрос выбранного токена сравнивается с ключом каждого токена (скалярное произведение). Большая оценка — «этот токен мне важен». В настоящей модели оценки ещё делят на √d, чтобы они не были слишком большими.' },
@@ -15,16 +16,12 @@ const STAGES = [
   { title: 'Взвешенная сумма значений', text: 'У каждого токена есть вектор-значение (Value). Итог для запроса — сумма значений, умноженных на веса. Токен «впитывает» содержимое тех, на кого смотрел.' },
 ];
 
+// Игрушечные value-векторы всех токенов считаем один раз в фиксированном порядке,
+// чтобы они не зависели от того, какие примеры пользователь открывал раньше.
 const valueRng = createRng(11);
 const VALUES = new Map<string, number[]>();
-function valueOf(token: string): number[] {
-  let v = VALUES.get(token);
-  if (!v) {
-    v = Array.from({ length: 4 }, () => valueRng.next());
-    VALUES.set(token, v);
-  }
-  return v;
-}
+for (const ex of ATTENTION_EXAMPLES) for (const t of ex.tokens) if (!VALUES.has(t)) VALUES.set(t, Array.from({ length: 4 }, () => valueRng.next()));
+const valueOf = (token: string): number[] => VALUES.get(token) ?? [0, 0, 0, 0];
 
 export function AttentionStepByStep() {
   const [stage, setStage] = useState(0);
@@ -50,10 +47,10 @@ export function AttentionStepByStep() {
     <WidgetFrame
       title="Внимание по шагам"
       icon="🪜"
-      help="Выберите токен-запрос (нажмите на чип) и проходите этапы кнопками. Виджет использует те же примеры и ту же голову, что и 3D-сцена ниже: выбор синхронизирован."
+      help="Выберите токен-запрос (нажмите на чип) и проходите этапы кнопками. Виджет использует те же предложение, голову и маску, что и матрица ниже и 3D-сцена: выбор синхронизирован, «Сбросить» возвращает всё к исходному."
       onReset={() => {
         setStage(0);
-        attentionStore.getState().select(`t${example.focus}`);
+        resetAttention();
       }}
       note={<>{STAGES[stage].text}</>}
     >
@@ -65,7 +62,7 @@ export function AttentionStepByStep() {
         <strong>
           Шаг {stage + 1}. {STAGES[stage].title}
         </strong>{' '}
-        <span className="muted">— запрос: «{example.tokens[qi]}»</span>
+        <span className="muted">— запрос: «{example.tokens[qi]}», {example.heads[head].name.toLowerCase()}</span>
         {stage === 1 && !causal && (
           <p className="small" style={{ margin: '6px 0 0', color: theme.warn }}>
             Маска выключена, поэтому оценки не изменились. Включите тумблер «Причинная маска» — и всё, что правее запроса, погаснет.

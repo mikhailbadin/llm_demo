@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button, Select, Slider, WidgetFrame } from '@/components/ui';
+import { Button, Select, Slider, Toggle, WidgetFrame } from '@/components/ui';
 import { MODEL_PRESETS } from '@/data/presets';
-import { estimateParams, BYTES_PER_PARAM, type ModelConfig } from '@/lib/params';
+import { estimateParams, sameConfig, BYTES_PER_PARAM, type ModelConfig } from '@/lib/params';
 import { fmtBig, fmtBytes, fmtPct } from '@/lib/format';
 import { theme } from '@/styles/theme';
 
@@ -23,19 +23,20 @@ export function ParameterCalculator() {
   const [cfg, setCfg] = useState<ModelConfig>(MODEL_PRESETS[0].cfg);
   const r = estimateParams(cfg);
   const set = (p: Partial<ModelConfig>) => setCfg((c) => ({ ...c, ...p }));
-  const preset = MODEL_PRESETS.find((p) => JSON.stringify(p.cfg) === JSON.stringify(cfg));
+  const preset = MODEL_PRESETS.find((p) => sameConfig(p.cfg, cfg));
   const parts = [
     { label: 'Внимание', v: r.attention, c: theme.orange },
     { label: 'MLP', v: r.mlp, c: theme.accent2 },
     { label: 'Эмбеддинги', v: r.embedding, c: theme.accent },
+    { label: 'Выходной слой', v: r.output, c: theme.warn },
     { label: 'Позиции', v: r.positional, c: theme.muted2 },
-  ];
+  ].filter((p) => p.v > 0);
 
   return (
     <WidgetFrame
       title="Калькулятор параметров"
       icon="🧮"
-      help="Выберите размеры модели или нажмите на пресет. Число параметров считается по упрощённой формуле 12·L·d² + |V|·d (без bias и LayerNorm), поэтому оно немного отличается от официальных цифр."
+      help="Выберите размеры модели или нажмите на пресет. Число параметров считается по упрощённой формуле 12·L·d² + |V|·d (без bias и LayerNorm) плюс, если включены тумблеры, обучаемые позиционные векторы C·d и отдельная выходная матрица |V|·d. Число голов на итог не влияет — оно делит d между головами: подпись «12 × 64» означает 12 голов по 64 измерения."
       onReset={() => setCfg(MODEL_PRESETS[0].cfg)}
       note="Обратите внимание на долю MLP: две трети параметров блока — не во внимании, а в «полносвязных» слоях. А ещё на память: 7 миллиардов параметров в fp16 — это 14 ГБ, поэтому модели квантуют до int8 и int4."
     >
@@ -49,9 +50,21 @@ export function ParameterCalculator() {
       <div className="controls">
         <Select label="d_model (размер вектора)" value={String(cfg.dModel)} options={D_OPTIONS} onChange={(v) => set({ dModel: Number(v), heads: nearestDivisor(Number(v), cfg.heads) })} />
         <Slider label="L — число блоков" value={cfg.layers} min={1} max={128} onChange={(v) => set({ layers: v })} />
-        <Slider label="Голов внимания" value={cfg.heads} min={1} max={128} onChange={(v) => set({ heads: nearestDivisor(cfg.dModel, v) })} format={(v) => `${v} × ${Math.max(1, Math.round(cfg.dModel / v))}`} />
+        <Slider
+          label="Голов внимания"
+          hint="(на N не влияет)"
+          value={cfg.heads}
+          min={1}
+          max={128}
+          onChange={(v) => set({ heads: nearestDivisor(cfg.dModel, v) })}
+          format={(v) => `${v} × ${Math.max(1, Math.round(cfg.dModel / v))}`}
+        />
         <Select label="|V| — словарь" value={String(cfg.vocab)} options={V_OPTIONS} onChange={(v) => set({ vocab: Number(v) })} />
         <Select label="Контекст (токенов)" value={String(cfg.context)} options={C_OPTIONS} onChange={(v) => set({ context: Number(v) })} />
+        <div style={{ display: 'grid', gap: 6, alignSelf: 'end' }}>
+          <Toggle label="Обучаемые позиционные векторы (нет у RoPE)" checked={cfg.learnedPositions ?? true} onChange={(v) => set({ learnedPositions: v })} />
+          <Toggle label="Выходная матрица = таблица эмбеддингов" checked={cfg.tiedOutput ?? true} onChange={(v) => set({ tiedOutput: v })} />
+        </div>
       </div>
       <div className="stat-row">
         <div className="stat">

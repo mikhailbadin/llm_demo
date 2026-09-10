@@ -17,39 +17,52 @@ const INITIAL: Msg[] = [
   { role: 'assistant', text: 'BPE — способ построить словарь подслов: начинаем с символов и склеиваем самые частые пары.' },
 ];
 const ROLE_LABEL = { system: 'system', user: 'пользователь', assistant: 'ассистент' };
+// Стартовый диалог стоит 221 токен: при окне 224 он помещается целиком, а первое же добавленное сообщение вытесняет реплику с именем.
+const DEFAULT_WINDOW = 224;
+const DEFAULT_DRAFT = 'А почему русский текст дороже английского?';
 const ROLE_COLOR = { system: theme.accent2, user: theme.accent, assistant: theme.warn };
 
 export function ContextWindowVisualizer() {
   const [msgs, setMsgs] = useState<Msg[]>(INITIAL);
-  const [window_, setWindow] = useState(96);
+  const [window_, setWindow] = useState(DEFAULT_WINDOW);
   const [role, setRole] = useState<'user' | 'assistant'>('user');
-  const [draft, setDraft] = useState('А почему русский текст дороже английского?');
+  const [draft, setDraft] = useState(DEFAULT_DRAFT);
   const counted = useMemo(() => msgs.map((m) => ({ ...m, n: tokenizeBpe(m.text, BPE_MODEL).length + 4 })), [msgs]);
   const total = counted.reduce((s, m) => s + m.n, 0);
 
-  // окно — последние N токенов: идём с конца и отмечаем, что помещается
-  let acc = 0;
+  // Системный промпт приложение закрепляет: он занимает место первым, а остаток окна заполняется
+  // последними сообщениями с конца — так и работают реальные чат-приложения.
+  const sysIdx = counted.findIndex((m) => m.role === 'system');
+  let budget = window_;
   const visible = counted.map(() => false);
+  if (sysIdx >= 0 && counted[sysIdx].n <= budget) {
+    visible[sysIdx] = true;
+    budget -= counted[sysIdx].n;
+  }
   for (let i = counted.length - 1; i >= 0; i--) {
-    if (acc + counted[i].n <= window_) {
+    if (i === sysIdx) continue;
+    if (counted[i].n <= budget) {
       visible[i] = true;
-      acc += counted[i].n;
+      budget -= counted[i].n;
     } else break;
   }
+  const acc = window_ - budget;
   const lost = counted.filter((_, i) => !visible[i]).length;
-
+  const lastVisible = visible[counted.length - 1];
   return (
     <WidgetFrame
       title="Контекстное окно"
       icon="🪟"
-      help="Каждое сообщение стоит сколько-то токенов (+4 служебных на роль). Ползунок задаёт размер окна. Когда диалог не помещается, старые сообщения выпадают — модель их буквально не видит. Добавьте несколько сообщений и посмотрите, как «забывается» имя собеседника."
+      help="Каждое сообщение стоит сколько-то токенов (+4 служебных на роль). Ползунок задаёт размер окна. Системный промпт закреплён и остаётся всегда, а остаток окна занимают последние сообщения: когда диалог не помещается, самые старые реплики выпадают — модель их буквально не видит. Добавьте одно-два сообщения и посмотрите, как «забывается» имя собеседника."
       onReset={() => {
         setMsgs(INITIAL);
-        setWindow(96);
+        setWindow(DEFAULT_WINDOW);
+        setRole('user');
+        setDraft(DEFAULT_DRAFT);
       }}
       note="У настоящих моделей окно — от 8 тысяч до миллиона токенов, но принцип тот же: всё, что не поместилось, для модели не существует. Поэтому длинные диалоги «забывают» начало, а важные инструкции стоит держать в системном промпте, который всегда остаётся."
     >
-      <Slider label="Размер окна" value={window_} min={64} max={256} step={8} onChange={setWindow} format={(v) => plural(v, ['токен', 'токена', 'токенов'])} />
+      <Slider label="Размер окна" value={window_} min={64} max={320} step={8} onChange={setWindow} format={(v) => plural(v, ['токен', 'токена', 'токенов'])} />
       <div style={{ margin: '6px 0 12px' }}>
         <div className="row row--between small muted" style={{ marginBottom: 4 }}>
           <span>
@@ -67,7 +80,8 @@ export function ContextWindowVisualizer() {
             <div className="row row--between small">
               <span style={{ color: ROLE_COLOR[m.role], fontWeight: 600 }}>{ROLE_LABEL[m.role]}</span>
               <span className="mono muted">
-                {m.n} ток.{!visible[i] && <span style={{ color: theme.danger }}> · модель этого больше не видит</span>}
+                {m.n} ток.{m.role === 'system' && visible[i] && <span style={{ color: theme.accent2 }}> · закреплён</span>}
+                {!visible[i] && <span style={{ color: theme.danger }}> · модель этого больше не видит</span>}
               </span>
             </div>
             <div>{m.text}</div>
@@ -97,13 +111,13 @@ export function ContextWindowVisualizer() {
           Добавить
         </Button>
       </div>
-      {acc === 0 && counted.length > 0 && (
+      {!lastVisible && counted.length > 0 && (
         <p className="small" style={{ color: theme.danger, margin: '10px 0 0' }}>
           В окно не помещается даже последнее сообщение целиком ({counted[counted.length - 1].n} ток.). В такой ситуации приложению приходится обрезать сам текст —
           иначе модели нечего показать.
         </p>
       )}
-      {lost > 0 && acc > 0 && (
+      {lost > 0 && lastVisible && (
         <p className="small" style={{ color: theme.warn, margin: '10px 0 0' }}>
           {plural(lost, ['сообщение выпало', 'сообщения выпали', 'сообщений выпало'])} из окна. Если среди них было имя собеседника — модель его «забыла».
         </p>

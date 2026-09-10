@@ -4,11 +4,10 @@ import { createRng } from '@/lib/rng';
 import { fmtFixed } from '@/lib/format';
 import { mixHex, theme } from '@/styles/theme';
 
-const VOCAB = ['и', 'на', 'кошка', 'собака', 'рыба', 'хлеб', 'ест', 'спит', 'смотрит', 'птица'];
+// Токен — поверхностная форма слова: у «рыба» и «рыбу» были бы разные номера, поэтому в словаре именно те формы, что в предложении.
+const VOCAB = ['и', 'на', 'кошка', 'собака', 'рыбу', 'хлеб', 'ест', 'спит', 'смотрит', 'птицу'];
 const D = 8;
 const SENTENCE = ['кошка', 'ест', 'рыбу', 'и', 'смотрит', 'на', 'птицу'];
-const LEMMA: Record<string, string> = { рыбу: 'рыба', птицу: 'птица' };
-
 const rng = createRng(7);
 const E: number[][] = VOCAB.map(() => Array.from({ length: D }, () => Math.round(rng.gauss(0, 0.6) * 100) / 100));
 
@@ -19,7 +18,7 @@ function cellColor(v: number) {
 
 export function EmbeddingMatrixLookup() {
   const [sel, setSel] = useState<number | null>(0);
-  const rowOf = (tok: string) => VOCAB.indexOf(LEMMA[tok] ?? tok);
+  const rowOf = (tok: string) => VOCAB.indexOf(tok);
   const activeRow = sel !== null ? rowOf(SENTENCE[sel]) : null;
   return (
     <WidgetFrame

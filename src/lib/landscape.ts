@@ -1,19 +1,25 @@
+/** Амплитуда «ряби»: при 0,35 она сама образовывала третью яму у начала координат; при 0,18 ям ровно две. */
+const RIPPLE = 0.12;
+
 /** Игрушечный «ландшафт потерь» по двум параметрам: чаша + две ямы + рябь. */
 export function lossSurface(x: number, y: number): number {
   const bowl = 0.12 * (x * x + y * y);
   const pit1 = -2.0 * Math.exp(-((x - 1.5) ** 2 + (y - 1) ** 2) / 1.5);
   const pit2 = -1.2 * Math.exp(-((x + 2) ** 2 + (y + 2) ** 2) / 2);
-  const ripple = 0.35 * Math.sin(1.5 * x) * Math.cos(1.5 * y);
+  const ripple = RIPPLE * Math.sin(1.5 * x) * Math.cos(1.5 * y);
   return bowl + pit1 + pit2 + ripple + 2.2;
 }
 
 export function lossGradient(x: number, y: number): [number, number] {
   const e1 = Math.exp(-((x - 1.5) ** 2 + (y - 1) ** 2) / 1.5);
   const e2 = Math.exp(-((x + 2) ** 2 + (y + 2) ** 2) / 2);
-  const dx = 0.24 * x + (2.0 * e1 * (2 * (x - 1.5))) / 1.5 + (1.2 * e2 * (2 * (x + 2))) / 2 + 0.35 * 1.5 * Math.cos(1.5 * x) * Math.cos(1.5 * y);
-  const dy = 0.24 * y + (2.0 * e1 * (2 * (y - 1))) / 1.5 + (1.2 * e2 * (2 * (y + 2))) / 2 - 0.35 * 1.5 * Math.sin(1.5 * x) * Math.sin(1.5 * y);
+  const dx = 0.24 * x + (2.0 * e1 * (2 * (x - 1.5))) / 1.5 + (1.2 * e2 * (2 * (x + 2))) / 2 + RIPPLE * 1.5 * Math.cos(1.5 * x) * Math.cos(1.5 * y);
+  const dy = 0.24 * y + (2.0 * e1 * (2 * (y - 1))) / 1.5 + (1.2 * e2 * (2 * (y + 2))) / 2 - RIPPLE * 1.5 * Math.sin(1.5 * x) * Math.sin(1.5 * y);
   return [dx, dy];
 }
+
+/** Координаты двух ям (найдены численно), для подписей в сцене. */
+export const LOSS_MINIMA = { deep: [1.38, 0.97] as [number, number], local: [-1.71, -1.58] as [number, number] };
 
 /** Одномерная функция потерь для виджета градиентного спуска: невыпуклая, с двумя минимумами. */
 export function loss1d(w: number): number {

@@ -10,8 +10,10 @@ import { SceneFallback } from './SceneFallback';
 import { TourOverlay } from './TourOverlay';
 
 interface Props {
+  id?: string;
   sceneId: SceneId;
   title: string;
+
   store: SceneStore;
   overlay?: ReactNode;
   legend?: ReactNode;
@@ -22,7 +24,7 @@ interface Props {
  * Оболочка 3D-сцены без импортов three: заголовок, тулбар, ленивая загрузка, экскурсия,
  * защита от перехвата скролла и запасной вариант без WebGL.
  */
-export function SceneContainer({ sceneId, title, store, overlay, legend, help }: Props) {
+export function SceneContainer({ id, sceneId, title, store, overlay, legend, help }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const near = useInView(ref, { rootMargin: '300px', sticky: true });
   const visible = useInView(ref, { rootMargin: '80px' });
@@ -71,18 +73,28 @@ export function SceneContainer({ sceneId, title, store, overlay, legend, help }:
 
   const showGuard = isTouch && !guardDismissed && webgl;
 
+  // Клавиши ← → Esc обрабатывает viewport, поэтому при старте экскурсии переводим фокус на него.
+  const toggleTour = () => {
+    const s = store.getState();
+    if (s.tourStep === null) {
+      s.startTour();
+      ref.current?.focus({ preventScroll: true });
+    } else s.endTour();
+  };
+
   return (
-    <section className="scene" aria-label={title}>
+    <section className="scene" id={id} aria-label={title}>
       <header className="scene__head">
         <span className="scene__title">
           <span className="scene__badge">3D</span>
           {title}
         </span>
         {tourLength > 0 && (
-          <Button size="sm" variant={tourStep === null ? 'primary' : 'default'} onClick={() => (tourStep === null ? store.getState().startTour() : store.getState().endTour())}>
+          <Button size="sm" variant={tourStep === null ? 'primary' : 'default'} onClick={toggleTour}>
             {tourStep === null ? '▶ Экскурсия' : '■ Завершить'}
           </Button>
         )}
+
         <Button size="sm" variant="ghost" onClick={() => store.getState().resetCamera()} title="Вернуть камеру в исходное положение">
           ⟲ Камера
         </Button>

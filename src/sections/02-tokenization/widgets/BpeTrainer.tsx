@@ -5,12 +5,12 @@ import { tokenizeBpe } from '@/lib/bpe';
 import { plural } from '@/lib/format';
 
 const MAX = BPE_MODEL.merges.length;
+const DEFAULT_WORD = 'прочитать';
 
 export function BpeTrainer() {
   const [k, setK] = useState(0);
   const [touched, setTouched] = useState(false);
-  const [word, setWord] = useState('внимательность');
-
+  const [word, setWord] = useState(DEFAULT_WORD);
   const step = k > 0 ? BPE_MODEL.steps[k - 1] : null;
   const words = step ? step.words : BPE_MODEL.initialWords;
   const shown = useMemo(() => [...words].sort((a, b) => b.count - a.count).slice(0, 24), [words]);
@@ -33,8 +33,10 @@ export function BpeTrainer() {
       }
       onReset={() => {
         setK(0);
-        setWord('внимательность');
+        setWord(DEFAULT_WORD);
+        setTouched(false);
       }}
+
       note="Настоящие токенизаторы обучаются точно так же, только корпус — терабайты текста, а слияний — десятки тысяч. Поэтому частые слова вроде «the» становятся одним токеном, а редкие — цепочкой кусочков."
     >
       <div className="controls">
@@ -57,14 +59,16 @@ export function BpeTrainer() {
         {step ? (
           <>
             Шаг {k}: самая частая пара — <span className="chip chip--2 chip--sm">{step.pair[0]}</span> + <span className="chip chip--2 chip--sm">{step.pair[1]}</span>{' '}
-            встречается <strong>{plural(step.count, ['раз', 'раза', 'раз'])}</strong> → новый токен <span className="chip chip--0 chip--sm">{step.newToken}</span>. Словарь: {step.vocabSize}{' '}
-            токенов.
+            встречается <strong>{plural(step.count, ['раз', 'раза', 'раз'])}</strong> → новый токен <span className="chip chip--0 chip--sm">{step.newToken}</span>. Словарь:{' '}
+            {plural(step.vocabSize, ['токен', 'токена', 'токенов'])}.
           </>
         ) : (
           <>
-            Шаг 0: словарь состоит только из символов ({BPE_MODEL.baseVocab.length} штук). Каждое слово — цепочка отдельных букв.
+            Шаг 0: словарь состоит только из отдельных символов — букв, их вариантов с «▁» на конце слова и знаков препинания ({BPE_MODEL.baseVocab.length} штук).
+            Каждое слово — цепочка отдельных букв.
           </>
         )}
+
       </div>
 
       <div className="grid-2">
@@ -103,7 +107,8 @@ export function BpeTrainer() {
           </div>
           <div className="field">
             <label className="field__label" htmlFor="bpe-word">
-              <span>Проверьте на своём слове (с текущими {k} слияниями)</span>
+              <span>Проверьте на своём слове (после {plural(k, ['слияния', 'слияний', 'слияний'])})</span>
+
             </label>
             <input id="bpe-word" className="input" value={word} onChange={(e) => setWord(e.target.value)} spellCheck={false} />
           </div>

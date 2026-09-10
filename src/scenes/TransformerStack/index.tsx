@@ -147,6 +147,7 @@ function Contents({ store }: { store: SceneStore }) {
   const dimEmbed = useDim(store, 'embed');
   const dimRes = useDim(store, 'residual');
   const dimTop = useDim(store, 'top');
+  const residualHighlighted = store((s) => s.highlight.includes('residual'));
   const dist = useMemo(() => nextDistribution(NGRAM_MODEL, TOKENS).slice(0, 5), []);
   const residualHandlers = useHoverable(store, 'residual', false);
   const resHover = store((s) => s.hoveredId === 'residual');
@@ -190,17 +191,17 @@ function Contents({ store }: { store: SceneStore }) {
         <cylinderGeometry args={[0.07, 0.07, top - 0.7, 12]} />
         <meshStandardMaterial color={theme.accent2} emissive={theme.accent2} emissiveIntensity={dimRes ? 0.1 : resHover ? 1.2 : 0.7} transparent opacity={dimRes ? 0.3 : 0.95} />
       </mesh>
-      {(resHover || !dimRes) && store.getState().highlight.includes('residual') && (
+      {residualHighlighted && (
         <Label3D position={[0.3, top / 2, 0]} variant="accent">
           Остаточный поток: вектор токена, к которому каждый блок прибавляет свою поправку
         </Label3D>
       )}
-      {resHover && !store.getState().highlight.includes('residual') && (
+      {resHover && !residualHighlighted && (
         <Label3D position={[0.3, top / 2, 0]} variant="accent">
           Остаточный поток
         </Label3D>
       )}
-      <Particles height={top} enabled={particlesOn && !reduced} />
+      {particlesOn && <Particles height={top} enabled={!reduced} />}
 
       {slabs}
 

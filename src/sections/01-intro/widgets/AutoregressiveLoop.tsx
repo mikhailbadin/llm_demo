@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, WidgetFrame, TokenChips } from '@/components/ui';
 import { NGRAM_MODEL } from '@/data/model';
 import { detokenize, displayToken, endSentence, nextDistribution, EOS } from '@/lib/ngram';
-import { fmtPct } from '@/lib/format';
+import { fmtPct, plural } from '@/lib/format';
 import { theme } from '@/styles/theme';
 
 const START = ['дети', 'играют'];
@@ -91,7 +91,8 @@ export function AutoregressiveLoop() {
 
       <div className="grid-2" style={{ marginTop: 12 }}>
         <div>
-          <div className="small muted" style={{ marginBottom: 6 }}>Контекст ({seq.length} токенов)</div>
+          <div className="small muted" style={{ marginBottom: 6 }}>Контекст ({plural(seq.length, ['токен', 'токена', 'токенов'])})</div>
+
           <TokenChips tokens={seq.map((t, i) => ({ text: t, color: i % 6, highlight: phase === 0 && i === seq.length - 1 }))} showIds={false} />
           <p style={{ marginTop: 10, marginBottom: 0 }}>
             {done ? (

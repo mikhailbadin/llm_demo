@@ -1,5 +1,5 @@
 import { createRng } from '@/lib/rng';
-import { add, type Vec3 } from '@/lib/vec3';
+import { add, dist, type Vec3 } from '@/lib/vec3';
 import type { EmbeddingWord } from '@/lib/embeddings';
 
 export type ClusterId = 'animals' | 'food' | 'places' | 'professions' | 'emotions' | 'colors' | 'transport' | 'family';
@@ -25,20 +25,30 @@ export const CLUSTERS: Cluster[] = [
 const rng = createRng(42);
 const jitter = (sd: number): Vec3 => [rng.gauss(0, sd), rng.gauss(0, sd), rng.gauss(0, sd)];
 
-function cluster(id: ClusterId, words: string[], sd = 0.65): EmbeddingWord[] {
+/** Минимальное расстояние между точками одного кластера — чтобы шарики (диаметр 0,34) не сливались. */
+const MIN_GAP = 0.5;
+
+function cluster(id: ClusterId, words: string[], sd = 0.55): EmbeddingWord[] {
   const c = CLUSTERS.find((x) => x.id === id)!;
-  return words.map((word) => ({ id: word.toLowerCase(), word, cluster: id, pos: add(c.center, jitter(sd)) }));
+  const placed: Vec3[] = [];
+  return words.map((word) => {
+    // Детерминированный «перебор»: берём первый разброс, который не подходит слишком близко к уже поставленным точкам.
+    let pos = add(c.center, jitter(sd));
+    for (let tries = 0; tries < 50 && placed.some((p) => dist(p, pos) < MIN_GAP); tries++) pos = add(c.center, jitter(sd));
+    placed.push(pos);
+    return { id: word.toLowerCase(), word, cluster: id, pos };
+  });
 }
 
 /** Кластер «семья и титулы» построен явно, чтобы работала арифметика: король − мужчина + женщина = королева. */
 function familyCluster(): EmbeddingWord[] {
   const c = CLUSTERS.find((x) => x.id === 'family')!.center;
-  const g: Vec3 = [1.2, 0.3, 0]; // «женский» сдвиг
-  const r: Vec3 = [0, 1.4, 0.6]; // «королевский» сдвиг
-  const young: Vec3 = [0.6, -1.0, 0.2];
-  const parent: Vec3 = [-0.8, -0.6, 0.6];
-  const sibling: Vec3 = [-0.3, 0.2, -1.0];
-  const artist: Vec3 = [0.9, 0.8, -0.9];
+  const g: Vec3 = [1.1, 0.25, 0]; // «женский» сдвиг
+  const r: Vec3 = [0, 1.0, 0.4]; // «королевский» сдвиг
+  const young: Vec3 = [0.5, -0.8, 0.2];
+  const parent: Vec3 = [-0.7, -0.5, 0.5];
+  const sibling: Vec3 = [-0.3, 0.2, -0.8];
+  const artist: Vec3 = [0.9, 1.1, -0.9];
   const pairs: [string, string, Vec3][] = [
     ['мужчина', 'женщина', [0, 0, 0]],
     ['король', 'королева', r],
@@ -57,20 +67,24 @@ function familyCluster(): EmbeddingWord[] {
   return out;
 }
 
-/** Страны + города на одной «оси столицы», чтобы работало Париж − Франция + Италия ≈ Рим. */
+/**
+ * Страны + города на одной «оси столицы», чтобы работало Париж − Франция + Италия ≈ Рим.
+ * Позиции стран заданы явно (а не случайным разбросом), чтобы точки не слипались.
+ */
 function placesCluster(): EmbeddingWord[] {
   const c = CLUSTERS.find((x) => x.id === 'places')!.center;
   const cityAxis: Vec3 = [0.9, 0.7, -0.5];
-  const pairs: [string, string][] = [
-    ['Россия', 'Москва'],
-    ['Франция', 'Париж'],
-    ['Германия', 'Берлин'],
-    ['Италия', 'Рим'],
-    ['Япония', 'Токио'],
+  const pairs: [string, string, Vec3][] = [
+    ['Россия', 'Москва', [-0.9, 0.2, -0.5]],
+    ['Франция', 'Париж', [0.6, -0.4, 0.7]],
+    ['Германия', 'Берлин', [-0.3, 0.8, 0.5]],
+    ['Италия', 'Рим', [0.8, 0.5, -0.6]],
+    ['Япония', 'Токио', [-0.5, -0.9, 0.3]],
   ];
   const out: EmbeddingWord[] = [];
-  for (const [country, city] of pairs) {
-    const base = add(c, jitter(0.5));
+  for (const [country, city, off] of pairs) {
+    const base = add(add(c, off), jitter(0.04));
+
     out.push({ id: country.toLowerCase(), word: country, cluster: 'places', pos: base });
     out.push({ id: city.toLowerCase(), word: city, cluster: 'places', pos: add(add(base, cityAxis), jitter(0.04)) });
   }

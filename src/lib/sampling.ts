@@ -32,7 +32,11 @@ export function withTemperature(dist: readonly Candidate[], temperature: number)
   return dist.map((c, i) => ({ token: c.token, p: probs[i] }));
 }
 
-/** Полный конвейер: температура → сортировка → top-k → top-p → перенормировка. */
+/**
+ * Полный конвейер: температура → сортировка → top-k → top-p → перенормировка.
+ * Как в стандартных реализациях, top-p считается по вероятностям, перенормированным после top-k.
+ * Самый вероятный токен остаётся всегда, даже при крошечном p.
+ */
 export function transformDistribution(dist: readonly Candidate[], opts: SamplingOptions): Transformed[] {
   const tempered = withTemperature(dist, opts.temperature);
   const rows: Transformed[] = tempered
@@ -46,16 +50,18 @@ export function transformDistribution(dist: readonly Candidate[], opts: Sampling
     });
   }
   if (opts.topP !== null && opts.topP < 1) {
+    const mass = rows.filter((r) => r.kept).reduce((s, r) => s + r.pTemp, 0) || 1;
     let cum = 0;
     for (const r of rows) {
       if (!r.kept) continue;
       if (cum >= opts.topP - 1e-9) {
         r.kept = false;
       } else {
-        cum += r.pTemp;
+        cum += r.pTemp / mass;
       }
     }
   }
+  if (rows.length > 0 && !rows.some((r) => r.kept)) rows[0].kept = true;
   const z = rows.filter((r) => r.kept).reduce((s, r) => s + r.pTemp, 0) || 1;
   for (const r of rows) r.pFinal = r.kept ? r.pTemp / z : 0;
   return rows;

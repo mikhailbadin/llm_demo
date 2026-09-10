@@ -5,7 +5,7 @@ import { ATTENTION_EXAMPLES } from '@/data/attentionExamples';
 import { scoresToWeights } from '@/lib/attention';
 import { fmtFixed } from '@/lib/format';
 import { attentionStore } from '@/scenes/Attention/store';
-import { AttentionControls } from './AttentionControls';
+import { AttentionControls, resetAttention } from './AttentionControls';
 
 export function AttentionHeatmap() {
   const exampleId = attentionStore((s) => s.params.example as string);
@@ -14,16 +14,22 @@ export function AttentionHeatmap() {
   const selectedId = attentionStore((s) => s.selectedId);
   const example = ATTENTION_EXAMPLES.find((e) => e.id === exampleId) ?? ATTENTION_EXAMPLES[0];
   const weights = useMemo(() => scoresToWeights(example.heads[head].scores, causal), [example, head, causal]);
-  const [hover, setHover] = useState<[number, number] | null>(null);
-  const activeRow = selectedId?.startsWith('t') ? Number(selectedId.slice(1)) : null;
+  // Наведение помним вместе с id примера: пример можно сменить с клавиатуры, не уводя курсор с ячейки,
+  // и индексы старого примера вышли бы за границы новой матрицы.
+  const [hoverState, setHover] = useState<{ ex: string; r: number; c: number } | null>(null);
+  const n = example.tokens.length;
+  const hover = hoverState && hoverState.ex === example.id && hoverState.r < n && hoverState.c < n ? hoverState : null;
+  const selectedIdx = selectedId?.startsWith('t') ? Number(selectedId.slice(1)) : null;
+  const activeRow = selectedIdx !== null && selectedIdx < n ? selectedIdx : null;
   const matrix = weights.map((row, i) => row.map((w, j) => (causal && j > i ? null : w)));
 
   return (
     <WidgetFrame
       title="Матрица внимания"
       icon="🔥"
-      help="Строка — токен-запрос, столбец — токен-ключ, цвет — вес внимания. Каждая строка суммируется в 1. Нажмите на строку, чтобы выбрать этот запрос в 3D-сцене. Наведите на ячейку — увидите точное значение."
+      help="Строка — токен-запрос, столбец — токен-ключ, цвет — вес внимания. Каждая строка суммируется в 1. Нажмите на строку, чтобы выбрать этот запрос в 3D-сцене. Наведите на ячейку — увидите точное значение. Выбор предложения, головы и маски общий для всех виджетов раздела и 3D-сцены."
       note={example.note}
+      onReset={resetAttention}
       actions={<Toggle label="Маска" checked={causal} onChange={(v) => attentionStore.getState().setParam('causal', v)} />}
     >
       <div style={{ marginBottom: 12 }}>
@@ -38,7 +44,7 @@ export function AttentionHeatmap() {
             cell={example.tokens.length > 8 ? 34 : 40}
             activeRow={activeRow}
             onClickRow={(r) => attentionStore.getState().select(`t${r}`)}
-            onHoverCell={(r, c) => setHover(r !== null && c !== null ? [r, c] : null)}
+            onHoverCell={(r, c) => setHover(r !== null && c !== null ? { ex: example.id, r, c } : null)}
             rowTitle="запрос (Query)"
             colTitle="ключ (Key)"
             showValues={example.tokens.length <= 9}
@@ -49,10 +55,10 @@ export function AttentionHeatmap() {
             <>
               <div className="muted small">вес внимания</div>
               <div>
-                «{example.tokens[hover[0]]}» → «{example.tokens[hover[1]]}»
+                «{example.tokens[hover.r]}» → «{example.tokens[hover.c]}»
               </div>
               <div className="stat__value" style={{ marginTop: 4 }}>
-                {matrix[hover[0]][hover[1]] === null ? '0 (маска)' : fmtFixed(matrix[hover[0]][hover[1]]!, 3)}
+                {matrix[hover.r][hover.c] === null ? '0 (маска)' : fmtFixed(matrix[hover.r][hover.c]!, 3)}
               </div>
             </>
           ) : (

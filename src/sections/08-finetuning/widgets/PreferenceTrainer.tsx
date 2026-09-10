@@ -7,11 +7,19 @@ import { theme } from '@/styles/theme';
 
 const ETA = 1.2;
 interface Row {
+  /** награды до выбора — от них считается ровно один шаг градиента */
+  rA0: number;
+  rB0: number;
   rA: number;
   rB: number;
   choice: 'a' | 'b' | null;
 }
-const initial = (): Row[] => PREFERENCE_PAIRS.map((_, i) => ({ rA: 0.3 * Math.sin(i * 1.7), rB: 0.3 * Math.cos(i * 2.3), choice: null }));
+const initial = (): Row[] =>
+  PREFERENCE_PAIRS.map((_, i) => {
+    const rA = 0.3 * Math.sin(i * 1.7);
+    const rB = 0.3 * Math.cos(i * 2.3);
+    return { rA0: rA, rB0: rB, rA, rB, choice: null };
+  });
 
 export function PreferenceTrainer() {
   const [rows, setRows] = useState<Row[]>(initial);
@@ -23,16 +31,18 @@ export function PreferenceTrainer() {
   const agree = rows.filter((r, k) => r.choice !== null && r.choice === PREFERENCE_PAIRS[k].human).length;
   const answered = rows.filter((r) => r.choice !== null).length;
 
+  // Один шаг градиента по −log σ(r_win − r_lose) от исходных наград: повторный клик или смена
+  // выбора не накапливают шаги, а пересчитывают тот же единственный шаг.
   const choose = (c: 'a' | 'b') => {
     setRows((prev) =>
       prev.map((r, k) => {
         if (k !== i) return r;
-        const win = c === 'a' ? r.rA : r.rB;
-        const lose = c === 'a' ? r.rB : r.rA;
+        const win = c === 'a' ? r.rA0 : r.rB0;
+        const lose = c === 'a' ? r.rB0 : r.rA0;
         const grad = 1 - sigmoid(win - lose);
         const nWin = win + ETA * grad;
         const nLose = lose - ETA * grad;
-        return { rA: c === 'a' ? nWin : nLose, rB: c === 'a' ? nLose : nWin, choice: c };
+        return { ...r, rA: c === 'a' ? nWin : nLose, rB: c === 'a' ? nLose : nWin, choice: c };
       }),
     );
   };
@@ -61,6 +71,7 @@ export function PreferenceTrainer() {
               key={c}
               type="button"
               className="card"
+              aria-pressed={chosen}
               onClick={() => choose(c)}
               style={{ textAlign: 'left', cursor: 'pointer', borderColor: chosen ? theme.accent : row.choice ? theme.border : theme.border2, font: 'inherit', color: 'inherit', padding: '12px 14px' }}
             >

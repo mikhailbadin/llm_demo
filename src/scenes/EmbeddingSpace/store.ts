@@ -1,9 +1,12 @@
 import { createSceneStore, type TourStep } from '../store';
 import { getCluster } from '@/data/embeddings';
-import { add } from '@/lib/vec3';
+import { add, lerp3 } from '@/lib/vec3';
 
 const animals = getCluster('animals').center;
+const food = getCluster('food').center;
 const family = getCluster('family').center;
+/** Точка между «животными» и «едой» — чтобы на шаге про кластеры оба были в кадре. */
+const between = lerp3(animals, food, 0.5);
 
 export const EMBEDDING_TOUR: TourStep[] = [
   {
@@ -19,8 +22,9 @@ export const EMBEDDING_TOUR: TourStep[] = [
     id: 'clusters',
     title: 'Похожие слова — рядом',
     text: 'Животные собрались в одном месте, еда — в другом. Никто не раскладывал их вручную: при обучении модель сама сдвигает векторы слов, которые встречаются в похожих контекстах, поближе друг к другу.',
-    camera: { position: add(animals, [4.5, 3, 5]), target: animals },
-    highlight: ['cluster:animals'],
+    camera: { position: add(between, [2, 4.5, 11.5]), target: between },
+    highlight: ['cluster:animals', 'cluster:food'],
+
     params: { mode: 'neighbors' },
     select: null,
   },
@@ -36,7 +40,8 @@ export const EMBEDDING_TOUR: TourStep[] = [
   {
     id: 'analogy',
     title: 'Арифметика смыслов',
-    text: 'Направления в этом пространстве тоже что-то значат. Стрелка от «мужчина» к «король» — это «королевскость». Приложим ту же стрелку к «женщина» — и попадём почти точно в «королева». Король − мужчина + женщина ≈ королева.',
+    text: 'Направления в этом пространстве тоже что-то значат. Стрелка от «мужчина» к «король» — это «королевскость». Приложим ту же стрелку к «женщина» — и попадём почти точно в «королева». Король − мужчина + женщина ≈ королева. В панели управления можно подставить любые три слова.',
+
     camera: { position: add(family, [1.5, 2.5, 6]), target: add(family, [0.6, 0.6, 0]) },
     highlight: ['cluster:family'],
     params: { mode: 'analogy', a: 'король', b: 'мужчина', c: 'женщина' },

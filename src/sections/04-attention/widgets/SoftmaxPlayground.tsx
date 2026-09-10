@@ -30,7 +30,7 @@ export function SoftmaxPlayground() {
             <Slider key={i} label={<span className="mono">z{i + 1} · {LABELS[i]}</span>} value={v} min={-5} max={5} step={0.1} onChange={(x) => setOne(i, x)} format={(x) => fmtFixed(x, 1)} />
           ))}
           <div className="btn-row" style={{ marginTop: 8 }}>
-            <Button size="sm" onClick={() => setZ(z.map((_, i) => (i === 0 ? 9 : 0)))}>
+            <Button size="sm" onClick={() => setZ(z.map((_, i) => (i === 0 ? 5 : 0)))}>
               Один огромный логит
             </Button>
             <Button size="sm" onClick={() => setZ(z.map(() => 1))}>

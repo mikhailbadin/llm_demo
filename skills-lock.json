@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "ast-index": {
+      "source": "defendend/claude-ast-index-search",
+      "sourceType": "github",
+      "skillPath": "plugin/skills/ast-index/SKILL.md",
+      "computedHash": "ce884e266a63c40a1d52c81ec47105abc6efefe7c48d6ffdcfaa55bae742e892"
+    }
+  }
+}

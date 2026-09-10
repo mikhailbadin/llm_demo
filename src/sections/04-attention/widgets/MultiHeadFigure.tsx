@@ -18,7 +18,7 @@ export function MultiHeadFigure() {
   );
   return (
     <figure style={{ margin: '16px 0 24px' }}>
-      <svg className="chart" viewBox="0 0 620 210" role="img" aria-label="Схема многоголового внимания" style={{ maxHeight: 220 }}>
+      <svg className="chart" viewBox="0 0 620 224" role="img" aria-label="Схема многоголового внимания" style={{ maxHeight: 234 }}>
         <defs>
           <marker id="mh-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
             <path d="M0 0L10 5L0 10z" fill={theme.muted2} />
@@ -30,8 +30,8 @@ export function MultiHeadFigure() {
           return (
             <g key={i}>
               <line x1={100} y1={105} x2={158} y2={y + 20} stroke={theme.muted2} strokeWidth={1.2} markerEnd="url(#mh-arr)" />
-              {box(160, y, 80, 40, `W_Q W_K W_V`, theme.accent2, `голова ${i + 1}`)}
-              <line x1={240} y1={y + 20} x2={268} y2={y + 20} stroke={theme.muted2} strokeWidth={1.2} markerEnd="url(#mh-arr)" />
+              {box(158, y, 88, 40, `W_Q W_K W_V`, theme.accent2, `голова ${i + 1}`)}
+              <line x1={246} y1={y + 20} x2={268} y2={y + 20} stroke={theme.muted2} strokeWidth={1.2} markerEnd="url(#mh-arr)" />
               {box(270, y, 110, 40, 'Внимание', theme.warn, `d/${heads} измерений`)}
               <line x1={380} y1={y + 20} x2={418} y2={95 + i * 6} stroke={theme.muted2} strokeWidth={1.2} markerEnd="url(#mh-arr)" />
             </g>
@@ -40,8 +40,11 @@ export function MultiHeadFigure() {
         {box(420, 80, 80, 50, 'Склеить', theme.ok, 'concat')}
         <line x1={500} y1={105} x2={528} y2={105} stroke={theme.muted2} strokeWidth={1.2} markerEnd="url(#mh-arr)" />
         {box(530, 80, 80, 50, 'W_O', theme.accent, 'смешать')}
-        <text x={310} y={205} textAnchor="middle" fontSize={11} fill={theme.muted}>
-          Каждая голова получает свои матрицы Q, K, V и работает в своём подпространстве. Результаты склеивают и снова проецируют.
+        <text x={310} y={203} textAnchor="middle" fontSize={11} fill={theme.muted}>
+          Каждая голова получает свои матрицы Q, K, V и работает в своём подпространстве.
+        </text>
+        <text x={310} y={217} textAnchor="middle" fontSize={11} fill={theme.muted}>
+          Результаты склеивают и снова проецируют матрицей W_O.
         </text>
       </svg>
     </figure>

@@ -2,7 +2,7 @@ import { Callout, Formula, M, SectionHero, Summary, Term } from '@/components/ui
 import { SceneContainer } from '@/components/three-shell/SceneContainer';
 import { embeddingStore } from '@/scenes/EmbeddingSpace/store';
 import { CosinePlayground } from './widgets/CosinePlayground';
-import { VectorArithmetic } from './widgets/VectorArithmetic';
+import { EMBEDDING_SCENE_ID, VectorArithmetic } from './widgets/VectorArithmetic';
 import { EmbeddingMatrixLookup } from './widgets/EmbeddingMatrixLookup';
 import { EmbeddingOverlay } from './widgets/EmbeddingOverlay';
 
@@ -36,7 +36,9 @@ export default function EmbeddingsSection() {
         экскурсию — она проведёт по всем идеям раздела.
       </Callout>
       <SceneContainer
+        id={EMBEDDING_SCENE_ID}
         sceneId="embedding-space"
+
         title="Пространство эмбеддингов"
         store={embeddingStore}
         overlay={<EmbeddingOverlay />}

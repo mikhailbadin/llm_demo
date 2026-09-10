@@ -34,6 +34,8 @@ export function CosinePlayground() {
   const onMove = (e: React.PointerEvent) => {
     if (!drag) return;
     const v = local(e);
+    // Нулевой вектор направления не имеет — в начало координат наконечник не ставим.
+    if (v.x === 0 && v.y === 0) return;
     if (drag === 'a') setA(v);
     else setB(v);
   };
@@ -41,11 +43,20 @@ export function CosinePlayground() {
   const pb = toPx(b);
   const gaugeColor = cos > 0.5 ? theme.ok : cos < -0.5 ? theme.danger : theme.warn;
 
+  // Дуга угла между векторами: угол всегда ≤ 180°, поэтому разность направлений приводим к (−π, π].
+  const angA = Math.atan2(a.y, a.x);
+  const angB = Math.atan2(b.y, b.x);
+  let dAng = angB - angA;
+  if (dAng > Math.PI) dAng -= 2 * Math.PI;
+  if (dAng < -Math.PI) dAng += 2 * Math.PI;
+  const ARC_R = 28;
+  const arcPath = `M ${C + ARC_R * Math.cos(angA)} ${C - ARC_R * Math.sin(angA)} A ${ARC_R} ${ARC_R} 0 0 ${dAng > 0 ? 0 : 1} ${C + ARC_R * Math.cos(angB)} ${C - ARC_R * Math.sin(angB)}`;
   return (
     <WidgetFrame
       title="Косинусная близость двух векторов"
       icon="📐"
-      help="Перетаскивайте наконечники стрелок. Справа пересчитываются скалярное произведение, длины и косинус угла. Обратите внимание: длина стрелки на косинус не влияет, только направление."
+      help="Перетаскивайте наконечники стрелок или нажмите одну из кнопок с готовыми примерами. Справа пересчитываются скалярное произведение, длины и косинус угла. Обратите внимание: длина стрелки на косинус не влияет, только направление — пример «Разной длины» даёт ровно 1."
+
       onReset={() => {
         setA({ x: 2, y: 1 });
         setB({ x: 1, y: 2 });
@@ -73,12 +84,8 @@ export function CosinePlayground() {
             ))}
             <line className="chart__axis" x1={0} x2={SIZE} y1={C} y2={C} />
             <line className="chart__axis" x1={C} x2={C} y1={0} y2={SIZE} />
-            <path
-              d={`M ${C + 28 * Math.cos(Math.atan2(a.y, a.x)) } ${C - 28 * Math.sin(Math.atan2(a.y, a.x))} A 28 28 0 ${Math.abs(Math.atan2(b.y, b.x) - Math.atan2(a.y, a.x)) > Math.PI ? 1 : 0} ${Math.atan2(b.y, b.x) > Math.atan2(a.y, a.x) ? 0 : 1} ${C + 28 * Math.cos(Math.atan2(b.y, b.x))} ${C - 28 * Math.sin(Math.atan2(b.y, b.x))}`}
-              fill="none"
-              stroke={gaugeColor}
-              strokeWidth={2}
-            />
+            <path d={arcPath} fill="none" stroke={gaugeColor} strokeWidth={2} />
+
             <line x1={C} y1={C} x2={pa.x} y2={pa.y} stroke={theme.accent} strokeWidth={3} strokeLinecap="round" />
             <line x1={C} y1={C} x2={pb.x} y2={pb.y} stroke={theme.accent2} strokeWidth={3} strokeLinecap="round" />
             <circle cx={pa.x} cy={pa.y} r={11} fill={theme.accent} stroke={theme.bg} strokeWidth={2} style={{ cursor: 'grab' }} onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); setDrag('a'); setTouched(true); }} />
@@ -87,7 +94,9 @@ export function CosinePlayground() {
             <text x={pb.x + 12} y={pb.y - 10} fill={theme.accent2} fontSize={14} fontWeight={700}>b</text>
           </svg>
           <div className="btn-row" style={{ marginTop: 8 }}>
-            <Button size="sm" onClick={() => { setA({ x: 2, y: 1 }); setB({ x: 1.6, y: 0.8 }); }}>Похожие</Button>
+            <Button size="sm" onClick={() => { setA({ x: 2, y: 1 }); setB({ x: 1.6, y: 1.2 }); }}>Похожие</Button>
+            <Button size="sm" onClick={() => { setA({ x: 2, y: 1 }); setB({ x: 0.8, y: 0.4 }); }}>Разной длины</Button>
+
             <Button size="sm" onClick={() => { setA({ x: 2, y: 0 }); setB({ x: 0, y: 2 }); }}>Перпендикулярные</Button>
             <Button size="sm" onClick={() => { setA({ x: 2, y: 1 }); setB({ x: -1.5, y: -0.8 }); }}>Противоположные</Button>
             <CoachMark show={!touched}>Потяните наконечник</CoachMark>

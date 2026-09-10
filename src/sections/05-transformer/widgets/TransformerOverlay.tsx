@@ -15,7 +15,7 @@ export function TransformerOverlay() {
   return (
     <>
       <Slider
-        label="Число блоков N"
+        label="Число блоков L"
         value={layers}
         min={2}
         max={12}

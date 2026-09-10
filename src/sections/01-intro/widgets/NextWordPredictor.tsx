@@ -3,7 +3,7 @@ import { BarChart } from '@/components/charts';
 import { Button, CoachMark, WidgetFrame } from '@/components/ui';
 import { NGRAM_MODEL } from '@/data/model';
 import { createRng } from '@/lib/rng';
-import { detokenize, displayToken, endSentence, nextDistribution, tokenizeText, EOS } from '@/lib/ngram';
+import { displayToken, endSentence, nextDistribution, tokenizeText, EOS } from '@/lib/ngram';
 import { sampleIndex } from '@/lib/sampling';
 import { fmtPct } from '@/lib/format';
 import { theme } from '@/styles/theme';
@@ -24,13 +24,19 @@ export function NextWordPredictor() {
   const isEnd = top[0].token === EOS;
   const finished = /[.!?…]$/.test(text.trimEnd());
 
+  // Токен приклеивается к исходному тексту, а не к пересобранному из токенов: так сохраняются регистр и знаки,
+  // которые модель не видит.
   const append = (tok: string) => {
     setTouched(true);
     if (tok === EOS) {
       setText((t) => endSentence(t));
       return;
     }
-    setText(detokenize([...tokens, tok]));
+    setText((t) => {
+      const base = t.trimEnd();
+      if (!base) return tok;
+      return /^[.,!?;:]$/.test(tok) ? base + tok : `${base} ${tok}`;
+    });
   };
 
   return (
@@ -39,14 +45,17 @@ export function NextWordPredictor() {
       icon="🔮"
       help={
         <>
-          Введите начало фразы. Справа — восемь самых вероятных продолжений по мнению игрушечной модели, обученной на 90 предложениях про кота, собаку и погоду.
-          Кнопка «Добавить самое вероятное» дописывает слово и повторяет предсказание — это и есть цикл генерации.
+          Введите начало фразы. Справа — восемь самых вероятных продолжений по мнению игрушечной модели, обученной на {NGRAM_MODEL.sentences} предложениях про кота,
+          собаку и погоду. Кнопка «Добавить самое вероятное» дописывает слово и повторяет предсказание — это и есть цикл генерации. «Добавить случайное» выбирает
+          слово случайно с учётом вероятностей; можно также нажать на любой столбик.
         </>
       }
       onReset={() => {
         setText(DEFAULT);
         setTouched(false);
+        setSeed(1);
       }}
+
       note="Модель ничего не «понимает»: она считает, какие слова встречались после таких же слов в обучающих текстах. У настоящих LLM тот же принцип, только словарь — сотни тысяч токенов, а контекст — тысячи слов."
     >
       <div className="grid-2">
@@ -73,12 +82,14 @@ export function NextWordPredictor() {
               {isEnd ? 'Завершить фразу' : 'Добавить самое вероятное'}
             </Button>
             <Button
+              disabled={isEnd && finished}
               onClick={() => {
                 const rng = createRng(seed);
                 setSeed((s) => s + 1);
                 append(dist[sampleIndex(dist.map((c) => c.p), rng)].token);
               }}
             >
+
               Добавить случайное
             </Button>
           </div>

@@ -5,6 +5,7 @@ import { CrossEntropyPlayground } from './widgets/CrossEntropyPlayground';
 import { NgramTrainer } from './widgets/NgramTrainer';
 import { GradientDescent1D } from './widgets/GradientDescent1D';
 import { LossOverlay } from './widgets/LossOverlay';
+import { LossDriver } from './widgets/LossDriver';
 
 export default function TrainingSection() {
   return (
@@ -32,7 +33,7 @@ export default function TrainingSection() {
         вероятность правильного ответа, тем больше штраф. Эта <Term id="loss">функция потерь</Term> называется <Term id="cross-entropy">cross-entropy</Term>.
       </p>
       <Formula tex={String.raw`\mathcal{L} = -\frac{1}{T}\sum_{t=1}^{T} \log p_\theta(x_t \mid x_{<t})`} caption={<>Средний минус-логарифм вероятности правильного токена по всем позициям текста. θ — параметры модели.</>} />
-      <Formula tex={String.raw`\text{PPL} = e^{\mathcal{L}}`} caption={<>Perplexity — та же величина, но в понятных единицах: «между сколькими равновероятными вариантами модель как будто выбирает». PPL = 1 — идеальное знание текста, PPL = 20 — хорошая модель на английском.</>} />
+      <Formula tex={String.raw`\text{PPL} = e^{\mathcal{L}}`} caption={<><Term id="perplexity">Perplexity</Term> — та же величина, но в понятных единицах: «между сколькими равновероятными вариантами модель как будто выбирает». PPL = 1 — идеальное знание текста; у моделей уровня GPT-2 на английском PPL ≈ 10–20, у современных больших — единицы.</>} />
       <CrossEntropyPlayground />
 
       <h2>Спуск по ландшафту</h2>
@@ -54,6 +55,7 @@ export default function TrainingSection() {
         overlay={<LossOverlay />}
         legend={<p>Высота и цвет — величина потерь для пары параметров. Красная стрелка — минус градиент (куда идти). Белая линия — пройденный путь. У настоящей модели измерений миллиарды, но алгоритм ровно тот же.</p>}
       />
+      <LossDriver />
 
       <h2>Масштаб</h2>
       <p>

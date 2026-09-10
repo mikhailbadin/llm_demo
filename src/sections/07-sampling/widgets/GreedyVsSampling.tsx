@@ -27,7 +27,7 @@ export function GreedyVsSampling() {
     >
       <div className="row" style={{ marginBottom: 12 }}>
         <div style={{ minWidth: 220 }}>
-          <Select value={prefix} options={SAMPLING_PREFIXES} onChange={setPrefix} />
+          <Select ariaLabel="Префикс" value={prefix} options={SAMPLING_PREFIXES} onChange={setPrefix} />
         </div>
         <Button size="sm" onClick={() => setSeed((s) => s + 1)}>
           Ещё раз
@@ -44,7 +44,7 @@ export function GreedyVsSampling() {
           <div className="small muted">Сэмплирование (T = 0,9)</div>
           {samples.map((s, i) => (
             <p key={i} style={{ margin: '6px 0 0' }}>
-              <span className="muted">{prefix}</span> {detokenize(s)}
+              <span className="muted">{prefix}</span> {s.length ? detokenize(s) : <span className="muted">⏎ (модель сразу закончила текст)</span>}
             </p>
           ))}
         </div>

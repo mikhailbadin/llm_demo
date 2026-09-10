@@ -58,20 +58,37 @@ function TokenSphere({ store, i, n, label, isQuery }: { store: SceneStore; i: nu
   );
 }
 
-function Tube({ store, from, to, weight, color, id, label }: { store: SceneStore; from: Vec3; to: Vec3; weight: number; color: string; id: string; label: string }) {
+interface TubeProps {
+  store: SceneStore;
+  /** индексы запроса и ключа, число токенов и сдвиг по z — примитивы, чтобы геометрия не пересоздавалась на каждый рендер */
+  qi: number;
+  j: number;
+  n: number;
+  zOff: number;
+  weight: number;
+  color: string;
+  id: string;
+  label: string;
+}
+
+function Tube({ store, qi, j, n, zOff, weight, color, id, label }: TubeProps) {
   const handlers = useHoverable(store, id, false);
   const hovered = store((s) => s.hoveredId === id);
   const highlight = store((s) => s.highlight);
   const dimmed = highlight.length > 0 && !highlight.includes(id);
-  const geometry = useMemo(() => {
+  const { geometry, mid } = useMemo(() => {
+    const p = tokenPos(qi, n);
+    const q = tokenPos(j, n);
+    const from: Vec3 = [p[0], 0.6, p[2] + zOff];
+    const to: Vec3 = [q[0], 0.05, q[2] + zOff];
     const a = new THREE.Vector3(...from);
     const b = new THREE.Vector3(...to);
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    mid.y += 0.9 + 0.3 * a.distanceTo(b);
-    const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
-    return new THREE.TubeGeometry(curve, 28, 0.025 + 0.17 * weight, 10, false);
-  }, [from, to, weight]);
-  const mid = useMemo<Vec3>(() => [(from[0] + to[0]) / 2, Math.max(from[1], to[1]) + 0.9 + 0.3 * Math.hypot(from[0] - to[0], from[2] - to[2]) * 0.75, (from[2] + to[2]) / 2], [from, to]);
+    const m = a.clone().add(b).multiplyScalar(0.5);
+    m.y += 0.9 + 0.3 * a.distanceTo(b);
+    const curve = new THREE.QuadraticBezierCurve3(a, m, b);
+    const mid: Vec3 = [(from[0] + to[0]) / 2, Math.max(from[1], to[1]) + 0.9 + 0.3 * Math.hypot(from[0] - to[0], from[2] - to[2]) * 0.75, (from[2] + to[2]) / 2];
+    return { geometry: new THREE.TubeGeometry(curve, 28, 0.025 + 0.17 * weight, 10, false), mid };
+  }, [qi, j, n, zOff, weight]);
   return (
     <>
       <mesh geometry={geometry} {...handlers}>
@@ -97,7 +114,9 @@ function Contents({ store }: { store: SceneStore }) {
 
   const example = ATTENTION_EXAMPLES.find((e) => e.id === exampleId) ?? ATTENTION_EXAMPLES[0];
   const n = example.tokens.length;
-  const qi = selectedId && selectedId.startsWith('t') ? Number(selectedId.slice(1)) : null;
+  // Выбранный токен может остаться от более длинного примера — за границы не выходим.
+  const selectedIdx = selectedId && selectedId.startsWith('t') ? Number(selectedId.slice(1)) : NaN;
+  const qi = Number.isInteger(selectedIdx) && selectedIdx >= 0 && selectedIdx < n ? selectedIdx : null;
   const weightsByHead = useMemo(() => example.heads.map((h) => scoresToWeights(h.scores, causal)), [example, causal]);
   const heads = allHeads ? [0, 1] : [head];
 
@@ -115,19 +134,19 @@ function Contents({ store }: { store: SceneStore }) {
         heads.map((h) =>
           weightsByHead[h][qi].map((w, j) => {
             if (j === qi || w < 0.02) return null;
-            const from = tokenPos(qi, n);
-            const to = tokenPos(j, n);
             const zOff = allHeads ? (h === 0 ? -0.35 : 0.35) : 0;
             const color = allHeads ? HEAD_COLORS[h] : mixHex(theme.accent2, theme.warn, w);
             return (
               <Tube
                 key={`${example.id}-${h}-${qi}-${j}-${causal}`}
                 store={store}
-                from={[from[0], 0.6, from[2] + zOff]}
-                to={[to[0], 0.05, to[2] + zOff]}
+                qi={qi}
+                j={j}
+                n={n}
+                zOff={zOff}
                 weight={w}
                 color={color}
-                id={`edge:${qi}-${j}`}
+                id={`edge:${h}:${qi}-${j}`}
                 label={`${example.tokens[qi]} → ${example.tokens[j]}: ${fmtFixed(w, 2)}${allHeads ? ` (голова ${h + 1})` : ''}`}
               />
             );

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Callout, Formula, M, SectionHero, Summary, Term } from '@/components/ui';
+import { NGRAM_MODEL } from '@/data/model';
 import { NextWordPredictor } from './widgets/NextWordPredictor';
 import { AutoregressiveLoop } from './widgets/AutoregressiveLoop';
 
@@ -26,8 +27,9 @@ export default function IntroSection() {
       </Callout>
 
       <Callout kind="try">
-        Ниже — крошечная модель, обученная на 90 предложениях. Введите начало фразы и посмотрите, что она предложит. Попробуйте «кот», «собака бежит», «утром на
-        улице».
+        Ниже — крошечная <Term id="ngram">n-граммная модель</Term>, обученная на {NGRAM_MODEL.sentences} предложениях. Введите начало фразы и посмотрите, что она
+        предложит. Попробуйте «кот», «собака бежит», «утром на улице».
+
       </Callout>
       <NextWordPredictor />
 

@@ -12,7 +12,13 @@ export function PromptTechniquesTabs() {
   const [id, setId] = useState<(typeof PROMPT_TECHNIQUES)[number]['id']>('zero');
   const t = PROMPT_TECHNIQUES.find((x) => x.id === id)!;
   return (
-    <WidgetFrame title="Четыре приёма промптинга" icon="🧰" note={t.why}>
+    <WidgetFrame
+      title="Четыре приёма промптинга"
+      icon="🧰"
+      help="Переключайте вкладки: каждая показывает пример промпта, а подсветка отмечает ту часть, в которой и состоит приём. Внизу — почему это работает с точки зрения «модель продолжает текст»."
+      onReset={() => setId('zero')}
+      note={t.why}
+    >
       <Tabs tabs={PROMPT_TECHNIQUES.map((x) => ({ id: x.id, label: x.label }))} value={id} onChange={setId} />
       <div style={{ fontWeight: 600, color: 'var(--text-strong)', marginBottom: 8 }}>{t.title}</div>
       <pre className="pre" style={{ fontFamily: 'var(--font)', fontSize: 14.5 }}>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { WidgetFrame } from '@/components/ui';
 import { buildChatSegments } from '@/data/chatTemplate';
 
@@ -7,6 +7,7 @@ export function ChatTemplateBuilder() {
   const [user, setUser] = useState('Что такое температура при генерации?');
   const [assistant, setAssistant] = useState('');
   const segs = buildChatSegments({ system, user, assistant });
+  const id = useId();
   return (
     <WidgetFrame
       title="Что на самом деле видит модель"
@@ -22,16 +23,16 @@ export function ChatTemplateBuilder() {
       <div className="grid-2">
         <div style={{ display: 'grid', gap: 10 }}>
           <div className="field">
-            <label className="field__label"><span style={{ color: 'var(--accent-2)' }}>system — системный промпт</span></label>
-            <textarea className="textarea" rows={2} value={system} onChange={(e) => setSystem(e.target.value)} />
+            <label className="field__label" htmlFor={`${id}-system`}><span style={{ color: 'var(--accent-2)' }}>system — системный промпт</span></label>
+            <textarea id={`${id}-system`} className="textarea" rows={2} value={system} onChange={(e) => setSystem(e.target.value)} />
           </div>
           <div className="field">
-            <label className="field__label"><span style={{ color: 'var(--accent)' }}>user — сообщение пользователя</span></label>
-            <textarea className="textarea" rows={2} value={user} onChange={(e) => setUser(e.target.value)} />
+            <label className="field__label" htmlFor={`${id}-user`}><span style={{ color: 'var(--accent)' }}>user — сообщение пользователя</span></label>
+            <textarea id={`${id}-user`} className="textarea" rows={2} value={user} onChange={(e) => setUser(e.target.value)} />
           </div>
           <div className="field">
-            <label className="field__label"><span style={{ color: 'var(--warn)' }}>assistant — начало ответа (необязательно)</span></label>
-            <textarea className="textarea" rows={2} value={assistant} onChange={(e) => setAssistant(e.target.value)} placeholder="оставьте пустым — здесь модель начнёт генерировать" />
+            <label className="field__label" htmlFor={`${id}-assistant`}><span style={{ color: 'var(--warn)' }}>assistant — начало ответа (необязательно)</span></label>
+            <textarea id={`${id}-assistant`} className="textarea" rows={2} value={assistant} onChange={(e) => setAssistant(e.target.value)} placeholder="оставьте пустым — здесь модель начнёт генерировать" />
           </div>
         </div>
         <div>

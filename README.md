@@ -9,7 +9,7 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Другие команды: `npm run build` (typecheck + сборка в `dist/` + копия `404.html` для SPA-фолбэка на статическом хостинге), `npm run preview`, `npm test` (vitest для `src/lib`, 29 тестов), `npm run lint`, `npm run typecheck`.
+Другие команды: `npm run build` (typecheck + сборка в `dist/` + копия `404.html` для SPA-фолбэка на статическом хостинге), `npm run preview`, `npm test` (vitest для `src/lib`), `npm run lint`, `npm run typecheck`.
 
 В dev-режиме первая загрузка каждой 3D-сцены занимает несколько секунд: Vite компилирует чанк на лету. В собранной версии сцена появляется примерно за 0,3 секунды.
 
